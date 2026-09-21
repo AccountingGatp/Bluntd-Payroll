@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blunted Payroll Timesheet Automation</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<style>
+:root{--bg:#f5f4f0;--panel:#fff;--ink:#1c231f;--dim:#5b6560;--line:#dcdcd3;--accent:#2f5d4c;--accent-ink:#fff;
+--ok:#2f7d54;--ok-bg:#e5f3ea;--bad:#a13c2b;--bad-bg:#fbe9e4;--warn:#8a6d1f;--warn-bg:#f7efdb;--mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141815;--panel:#1c2119;--ink:#eae7de;--dim:#9aa39a;--line:#33392f;--accent:#7fbfa0;--accent-ink:#0e1310;--ok:#7fd1a0;--ok-bg:#173324;--bad:#e0806a;--bad-bg:#3a201a;--warn:#e0c165;--warn-bg:#3a2f14;}}
+:root[data-theme="dark"]{--bg:#141815;--panel:#1c2119;--ink:#eae7de;--dim:#9aa39a;--line:#33392f;--accent:#7fbfa0;--accent-ink:#0e1310;--ok:#7fd1a0;--ok-bg:#173324;--bad:#e0806a;--bad-bg:#3a201a;--warn:#e0c165;--warn-bg:#3a2f14;}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:ui-sans-serif,system-ui,Segoe UI,Arial;line-height:1.45;}
+.wrap{max-width:1080px;margin:0 auto;padding:28px 18px 90px;}
+h1{font-family:Georgia,serif;font-size:1.6rem;margin:0 0 2px;font-weight:600;}
+.sub{color:var(--dim);font-size:.9rem;margin:0 0 22px;}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:20px 22px;margin-bottom:16px;}
+.step-label{font-size:.72rem;letter-spacing:.02em;color:var(--dim);margin-bottom:6px;}
+h2{font-size:1rem;margin:0 0 12px;font-weight:600;}
+.row{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;}
+label{display:block;font-size:.76rem;color:var(--dim);margin-bottom:4px;}
+input[type=text],input[type=number]{font-family:var(--mono);font-size:.92rem;padding:7px 9px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--ink);width:170px;}
+button,.filebtn{font-size:.85rem;padding:9px 15px;border-radius:4px;cursor:pointer;border:1px solid var(--line);background:transparent;color:var(--ink);font-family:inherit;}
+button.primary,.filebtn{background:var(--accent);color:var(--accent-ink);border:none;}
+button:disabled{opacity:.5;cursor:not-allowed;}
+.filebtn input{display:none;}
+.hint{font-size:.8rem;color:var(--dim);margin-top:8px;}
+#dropzone{border:1px dashed var(--line);border-radius:6px;padding:26px;text-align:center;color:var(--dim);font-size:.88rem;}
+#dropzone.drag{background:var(--ok-bg);}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));border:1px solid var(--line);border-radius:6px;overflow:hidden;}
+.stat{padding:13px 14px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);}
+.stat .n{font-family:var(--mono);font-size:1.3rem;}
+.stat .l{font-size:.72rem;color:var(--dim);margin-top:2px;}
+.badge{display:inline-block;font-size:.72rem;padding:2px 8px;border-radius:3px;font-weight:600;}
+.b-ok{background:var(--ok-bg);color:var(--ok);} .b-bad{background:var(--bad-bg);color:var(--bad);} .b-warn{background:var(--warn-bg);color:var(--warn);}
+.tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line);margin-bottom:14px;}
+.tab{padding:8px 14px;font-size:.85rem;cursor:pointer;border-bottom:2px solid transparent;color:var(--dim);}
+.tab.active{color:var(--ink);border-bottom-color:var(--accent);font-weight:600;}
+table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:.82rem;}
+th,td{text-align:left;padding:6px 9px;border-bottom:1px solid var(--line);white-space:nowrap;}
+th{font-family:ui-sans-serif,system-ui;font-size:.7rem;color:var(--dim);font-weight:500;position:sticky;top:0;background:var(--panel);}
+.overflow{max-height:480px;overflow:auto;border:1px solid var(--line);border-radius:4px;}
+.excl{color:var(--dim);}
+.problem td{color:var(--bad);}
+.tot-row td{font-weight:700;border-top:2px solid var(--line);}
+.checklist{list-style:none;padding:0;margin:0;font-size:.85rem;}
+.checklist li{padding:4px 0;display:flex;gap:8px;}
+.mapping-row{display:grid;grid-template-columns:1fr 90px 1fr auto;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid var(--line);font-size:.83rem;}
+.mapping-row input{width:100%;}
+.small{font-size:.78rem;color:var(--dim);}
+.test-pass{color:var(--ok);} .test-fail{color:var(--bad);} .test-na{color:var(--dim);}
+.actions{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;}
+.note{background:var(--warn-bg);color:var(--warn);border-radius:5px;padding:10px 14px;font-size:.83rem;margin-bottom:14px;}
+select{font-family:var(--mono);font-size:.82rem;padding:7px 9px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--ink);min-width:180px;}
+.gusto-map{display:grid;grid-template-columns:180px minmax(220px,1fr);gap:8px 12px;align-items:center;margin-top:10px;}
+.ready-box{border:1px solid var(--line);border-radius:6px;padding:12px 14px;margin-top:12px;}
+.employee-card{border:1px solid var(--line);border-radius:5px;margin:8px 0;background:var(--panel);}
+.employee-card summary{cursor:pointer;padding:10px 12px;font-weight:600;}
+.employee-card .employee-body{padding:0 12px 12px;}
+
+.review-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:12px;}
+.review-grid input,.review-grid textarea{width:100%;}
+textarea{font-family:inherit;font-size:.82rem;padding:7px 9px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--ink);min-height:72px;}
+.config-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;}
+.config-card{border:1px solid var(--line);border-radius:5px;padding:12px;}
+.config-card input{width:100%;}
+.approval-ok{border-color:var(--ok);background:var(--ok-bg)}
+.approval-bad{border-color:var(--bad);background:var(--bad-bg)}
+
+.sop-banner{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--ok);background:var(--ok-bg);border-radius:6px;padding:12px 14px;margin-bottom:16px;font-size:.84rem;}
+.sop-banner strong{display:block;margin-bottom:2px;}
+.mini-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:10px;}
+.mini-card{border:1px solid var(--line);border-radius:5px;padding:10px 12px;background:var(--panel);}
+.mini-card .k{font-size:.72rem;color:var(--dim);}.mini-card .v{font-family:var(--mono);margin-top:2px;}
+.optional{font-weight:400;color:var(--dim);font-size:.72rem;}
+
+.quick-flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin:14px 0 18px;}
+.flow-step{border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--panel);}
+.flow-step .num{width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:var(--accent);color:var(--accent-ink);font-weight:700;margin-bottom:6px;}
+.flow-step strong{display:block;font-size:.86rem;margin-bottom:3px;}
+.flow-step span{display:block;font-size:.76rem;color:var(--dim);}
+.change-panel{border:1px solid var(--accent);background:color-mix(in srgb,var(--panel) 92%,var(--ok-bg));border-radius:8px;padding:14px;margin-top:12px;}
+details.setup-box{border:1px solid var(--line);border-radius:8px;padding:12px 14px;background:var(--panel);margin-bottom:16px;}
+details.setup-box>summary{cursor:pointer;font-weight:700;font-size:.9rem;}
+.status-line{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;font-size:.8rem;}
+
+
+.workflow-card{border-left:4px solid var(--accent);}
+.prod-banner{background:var(--ok-bg);border:1px solid var(--ok);color:var(--ink);padding:12px 14px;border-radius:8px;margin-bottom:16px;font-size:.84rem;}
+.prod-banner strong{display:block;margin-bottom:2px;}
+.section-help{font-size:.79rem;color:var(--dim);margin-top:-4px;margin-bottom:12px;}
+.muted-panel{background:color-mix(in srgb,var(--panel) 96%,var(--bg));}
+.issue-bad{background:var(--bad-bg);color:var(--bad);border-radius:5px;padding:10px 14px;font-size:.85rem;margin-bottom:12px;cursor:pointer;}
+.issue-ok{background:var(--ok-bg);color:var(--ok);border-radius:5px;padding:10px 14px;font-size:.85rem;margin-bottom:12px;}
+#dropzone{cursor:pointer;}
+.rsc-chip{display:inline-block;padding:2px 7px;border-radius:10px;background:var(--warn-bg);color:var(--warn);font-size:.7rem;font-weight:700;}
+
+.panel-approved{border-color:var(--ok)!important;background:var(--ok-bg)!important;box-shadow:0 0 0 1px color-mix(in srgb,var(--ok) 35%,transparent);}
+.panel-ready{border-color:var(--ok)!important;background:color-mix(in srgb,var(--ok-bg) 55%,var(--panel))!important;}
+.panel-review{border-color:var(--warn)!important;background:color-mix(in srgb,var(--warn-bg) 45%,var(--panel))!important;}
+.approved-banner{margin-top:10px;padding:10px 12px;border-radius:6px;background:var(--ok-bg);color:var(--ok);font-weight:700;}
+button.approved-btn{background:var(--ok)!important;color:#fff!important;border-color:var(--ok)!important;}
+
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Blunted Payroll Timesheet Automation</h1>
+<p class="sub">Weekly payroll in five steps: upload the timesheet, review, approve, confirm with Gusto, download.</p>
+<div id="libError" class="note" style="display:none;background:var(--bad-bg);color:var(--bad);"></div>
+<div class="quick-flow">
+  <div class="flow-step"><div class="num">1</div><strong>Upload timesheet</strong><span>Drop the QBO export and check the pay period.</span></div>
+  <div class="flow-step"><div class="num">2</div><strong>Review results</strong><span>Payroll is calculated automatically. Fix rates or settings if needed.</span></div>
+  <div class="flow-step"><div class="num">3</div><strong>Approve</strong><span>Enter preparer and reviewer names, then approve.</span></div>
+  <div class="flow-step"><div class="num">4</div><strong>Confirm with Gusto</strong><span>Upload the Gusto report to check wages match.</span></div>
+  <div class="flow-step"><div class="num">5</div><strong>Download</strong><span>Get the final payroll workbook.</span></div>
+</div>
+
+<div class="panel workflow-card">
+  <div class="step-label">STEP 1</div>
+  <h2>Upload Timesheet</h2>
+  <div id="dropzone">Drop the QBO CSV / XLSX export here, or
+    <label class="filebtn" style="display:inline-block;">Choose file<input type="file" id="fileInput" accept=".csv,.xlsx,.xls"></label>
+  </div>
+  <div class="hint" id="fileStatus">No file uploaded yet.</div>
+  <div class="row" style="margin-top:12px;">
+    <div><label for="payrollFrequency">Payroll frequency</label><select id="payrollFrequency" onchange="onPayrollFrequencyChange()"><option value="Weekly">Weekly</option><option value="Biweekly">Biweekly</option></select></div>
+    <div><label for="payPeriodStart">Pay period start</label><input type="date" id="payPeriodStart" onchange="onPeriodChange()"></div>
+    <div><label for="payPeriodEnd">Pay period end</label><input type="date" id="payPeriodEnd" onchange="onPeriodChange()"></div>
+  </div>
+  <div class="hint" id="payPeriodHint"></div>
+</div>
+
+<div id="results" style="display:none;">
+<div id="afterProcess" style="display:none;">
+
+<div class="panel workflow-card">
+  <div class="step-label">STEP 2</div>
+  <h2>Review Results</h2>
+  <div class="hint" id="processStatus" style="margin:0 0 10px;"></div>
+  <div id="issueBanner"></div>
+  <div class="stats" id="statGrid"></div>
+  <div class="actions">
+    <button type="button" onclick="toggleWeeklySetup()">Edit rates &amp; settings</button>
+    <button type="button" onclick="process()">Reprocess</button>
+  </div>
+  <div id="weeklySetupWrap" style="display:none;margin-top:14px;">
+    <div class="note">After changing anything below, click <b>Reprocess</b>. Any earlier approval is cleared automatically.</div>
+    <h2>Employee Rates</h2>
+    <div class="actions">
+      <label class="filebtn">Upload rate file<input type="file" id="rateFileInput" accept=".csv,.xlsx,.xls"></label>
+      <label class="filebtn">Load rates from previous Week workbook<input type="file" id="referenceWorkbookInput" accept=".xlsx,.xls"></label>
+      <button onclick="addRateRow()">+ Add employee</button>
+      <button onclick="resetDefaultWeeklyRates()">Restore default rates</button>
+      <button onclick="if(confirm('Remove all employee rates?'))clearRates()">Clear all</button>
+    </div>
+    <div class="hint" id="rateFileStatus"></div>
+    <div class="hint">Reference workbook: <span id="referenceWorkbookStatus">not uploaded</span> &bull; Rates loaded: <span id="referenceRateStatus">0</span></div>
+    <div class="overflow" style="max-height:260px;margin-top:10px;"><table id="rateTable"></table></div>
+    <div class="hint"><span id="rateCount">0</span> employees configured. Missing or duplicate rates block approval.</div>
+    <h2 style="margin-top:18px;">Double Time Multiplier</h2>
+    <div class="config-grid"><div class="config-card"><label for="doubleMultiplier">Multiplier (e.g. 2)</label><input type="number" step="0.01" min="0" id="doubleMultiplier" placeholder="Only needed if Double Time exists"><div class="small">Required only when someone works more than 12 paid hours in a day.</div></div></div>
+    <details id="advancedPostPayrollConfig" style="margin-top:18px;border:1px solid var(--line);border-radius:6px;padding:12px 14px;">
+      <summary style="cursor:pointer;font-weight:600;">Optional: Workers' Comp and name matching for Gusto</summary>
+      <div class="hint" style="margin:8px 0 12px;">Only needed for the Gusto step when names differ between the timesheet and Gusto, or when WC / special allocations are used.</div>
+      <h2>Name Matching (Timesheet name &rarr; Gusto name)</h2>
+      <div class="actions"><button onclick="addAliasRow()">+ Add name match</button></div>
+      <div class="overflow" style="max-height:220px;margin-top:8px;"><table id="aliasTable"></table></div>
+      <h2 style="margin-top:16px;">WC Rates</h2>
+      <div class="actions"><button onclick="addWcRateRow()">+ Add WC rate</button></div>
+      <div class="overflow" style="max-height:220px;margin-top:8px;"><table id="wcRateTable"></table></div>
+      <h2 style="margin-top:16px;">Employee WC Codes &amp; Special Rules</h2>
+      <div class="actions"><button onclick="addSpecialRuleRow()">+ Add employee</button></div>
+      <div class="overflow" style="max-height:260px;margin-top:8px;"><table id="specialRuleTable"></table></div>
+    </details>
+  </div>
+  <div class="tabs" id="tabBar" style="margin-top:18px;"></div>
+  <div id="tabContent"></div>
+</div>
+
+<div class="panel workflow-card" id="prePayrollReviewPanel">
+  <div class="step-label">STEP 3</div>
+  <h2>Approve Payroll</h2>
+  <div class="stats" id="preApprovalStatusGrid"></div>
+  <div id="prePayrollEmployeeReview" style="margin-top:14px;"></div>
+  <div class="actions"><button class="primary" id="approveBtn" onclick="approvePrePayroll()">Approve for Gusto</button><button onclick="sendBackPrePayroll()">Send back for correction</button></div>
+  <div class="ready-box" id="approvalBox"></div>
+</div>
+
+<div class="panel workflow-card" id="gustoCheckpointPanel">
+  <div class="step-label">STEP 4</div>
+  <h2>Confirm with Gusto</h2>
+  <div class="hint" style="margin:0 0 8px;">After approval, upload the Gusto General Report (sheets: Basic, Detailed, WC, HZ &amp; EL, Paul). Wages are compared per employee.</div>
+  <div class="actions">
+    <label class="filebtn" id="gustoUploadLabel">Upload Gusto report<input type="file" id="gustoFileInput" accept=".xlsx,.xls" disabled></label>
+    <button id="gustoMismatchDownload" onclick="downloadGustoMismatchReport()" disabled>Download mismatches</button>
+  </div>
+  <div class="hint" id="gustoFileStatus"></div>
+  <div class="stats" style="margin-top:12px;" id="gustoStatusGrid"></div>
+  <div id="gustoComparisonBox" style="margin-top:14px;"></div>
+</div>
+
+<div class="panel workflow-card">
+  <div class="step-label">STEP 5</div>
+  <h2>Download</h2>
+  <div class="actions"><button class="primary" id="finalDownloadBtn" onclick="downloadWorkbook()">Download Payroll Workbook</button><button onclick="downloadAuditWorkbook()">Download Audit Workbook</button></div>
+  <div class="hint" id="downloadHint">The payroll workbook unlocks after approval. The audit workbook adds review and Gusto reconciliation sheets.</div>
+</div>
+
+</div></div>
+</div>
+
+<script>
+/* ---------------- Rate master ---------------- */
+const DEFAULT_WEEKLY_RATE_ROWS = [{"payrollId":"","username":"","name":"Adrian Rodriguez","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Adriana Lopez","rate":18.0,"notes":""},{"payrollId":"","username":"","name":"Alexander Torres","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Angie Hernandez","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Anielka Cano","rate":17.87,"notes":"Increased to@17.28 on 01/03/2025"},{"payrollId":"","username":"","name":"Arlin Sepulveda","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Blanca Mendoza","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Carlos Silva","rate":30.0,"notes":"Increased to@30 on 01/03/2025"},{"payrollId":"","username":"","name":"Crystal Aguilar","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Daniel Valle","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Deborah Duarte","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Dina Ceto","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Emily Hernandez","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Emmanuel Martinez","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Frank Saucedo","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Geidi Lopez","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Genesis Lopez","rate":19.0,"notes":"Increased from 07/28/2025"},{"payrollId":"","username":"","name":"Hazel","rate":19.0,"notes":"Old one"},{"payrollId":"","username":"","name":"Irene Herrera","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Iris Ruiz","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Jasmine Solis","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Jennifer Hernandez","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Jesus Alaniz","rate":19.0,"notes":""},{"payrollId":"","username":"","name":"Jonathon Ramirez","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Jorge Hernandez","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Joselyn Raymundo","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Juan Salgado","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Karla Bonilla","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Katy Gonzalez","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Larry Raymond","rate":25.0,"notes":""},{"payrollId":"","username":"","name":"Leah Lovos","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Leticia Valdez","rate":19.0,"notes":""},{"payrollId":"","username":"","name":"Lucia Lopez","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Marco Garcia","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Natalie Cardona","rate":17.75,"notes":""},{"payrollId":"","username":"","name":"Nicolas Andrade","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Nubia Cruz","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Eddy Lopez","rate":17.78,"notes":""},{"payrollId":"","username":"","name":"Justin Lopez","rate":17.78,"notes":""},{"payrollId":"","username":"","name":"Lissette Mejia","rate":17.78,"notes":""},{"payrollId":"","username":"","name":"Tracy pea","rate":17.78,"notes":""},{"payrollId":"","username":"","name":"winston Sanchez","rate":17.78,"notes":""},{"payrollId":"","username":"","name":"Paola Sanchez","rate":20.0,"notes":"Increased to $20 on 07/28/2025"},{"payrollId":"","username":"","name":"Paul Bates","rate":21.0,"notes":"Increased to $21 on 01/03/2025"},{"payrollId":"","username":"","name":"Rommel Hernandez","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Rosa Santini","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Sandra Martinez","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Sergio Urbina","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Silvia Zelaya","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Valery Moreno","rate":21.0,"notes":"Increased to $21 on 01/03/2025"},{"payrollId":"","username":"","name":"Velinda Ordonez","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Vilma Cruz","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Yohana Rivas","rate":17.87,"notes":"Increased to $17.80 on 01/03/2025"},{"payrollId":"","username":"","name":"Yvette Chavez","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Yvette Oropeza","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Zaira Castaneda","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Aishley Mendoza","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Alba Espinoza","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Gloria Cajina","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Gloria Espinoza","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Adriana Rivera","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Hazel Herrera","rate":25.0,"notes":""},{"payrollId":"","username":"","name":"Gringel Gonzalez","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Tamas Pazsicky","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Paola Rodriguez","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Julie Garcia","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Azucena Gomez","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Elysia Castro","rate":20.0,"notes":""},{"payrollId":"","username":"","name":"Alejandro Armenta","rate":17.87,"notes":""},{"payrollId":"","username":"","name":"Sylvia Lopez","rate":19.87,"notes":""},{"payrollId":"","username":"","name":"Bryan Centeno","rate":17.78,"notes":""},{"payrollId":"","username":"","name":"Scarlette Chacon","rate":17.78,"notes":""},{"payrollId":"","username":"","name":"Azucena Zuceth","rate":20.0,"notes":""},{"payrollId":"","username":"","name":"German Jimenez","rate":17.78,"notes":""}];
+let rateRows = DEFAULT_WEEKLY_RATE_ROWS.map(x=>({...x}));
+function resetDefaultWeeklyRates(){
+  rateRows=DEFAULT_WEEKLY_RATE_ROWS.map(x=>({...x}));
+  drawRateTable();
+  const s=document.getElementById('rateFileStatus'); if(s)s.textContent='Default weekly rate master restored from the approved reference workbook. Review/edit as needed.';
+  const rs=document.getElementById('referenceRateStatus'); if(rs)rs.textContent=String(rateRows.length)+' default';
+  invalidatePreApproval();
+}
+
+function normalizeName(v=""){ return String(v).trim().replace(/\s+/g," ").toLowerCase(); }
+function normalizeCode(v=""){ return String(v).trim().replace(/\s+/g," ").toLowerCase(); }
+function escAttr(s){ return String(s??"").replace(/"/g,'&quot;'); }
+function clearRates(){ rateRows=[]; drawRateTable(); document.getElementById('rateFileStatus').textContent='Rate master cleared.'; invalidatePreApproval(); }
+function renderRates(){ drawRateTable(); }
+function drawRateTable(){
+  const t=document.getElementById('rateTable');
+  let html='<tr><th>Payroll ID</th><th>Username</th><th>Full Name</th><th>Pay Rate</th><th>Notes</th><th></th></tr>';
+  rateRows.forEach((r,i)=>{ html+=`<tr><td><input type="text" value="${escAttr(r.payrollId||'')}" onchange="rateRows[${i}].payrollId=this.value;invalidatePreApproval()"></td><td><input type="text" value="${escAttr(r.username||'')}" onchange="rateRows[${i}].username=this.value;invalidatePreApproval()"></td><td><input type="text" value="${escAttr(r.name)}" onchange="rateRows[${i}].name=this.value;invalidatePreApproval()"></td><td><input type="number" step="0.01" min="0" value="${Number.isFinite(Number(r.rate))?r.rate:''}" onchange="{const v=parseFloat(this.value);rateRows[${i}].rate=Number.isFinite(v)?v:null;invalidatePreApproval();}"></td><td><input type="text" value="${escAttr(r.notes)}" onchange="rateRows[${i}].notes=this.value"></td><td><button onclick="rateRows.splice(${i},1);drawRateTable();invalidatePreApproval()">✕</button></td></tr>`; });
+  t.innerHTML=html; document.getElementById('rateCount').textContent=rateRows.length;
+}
+function addRateRow(){ rateRows.push({payrollId:"",username:"",name:"",rate:null,notes:""}); drawRateTable(); invalidatePreApproval(); }
+function employeeIdentityKey(row,fullname){const pid=String(row?.payroll_id||'').trim(),user=String(row?.username||'').trim();if(pid)return 'pid:'+pid.toLowerCase();if(user)return 'user:'+user.toLowerCase();return normalizeName(fullname||row?.fullname||'');}
+function rateMap(){
+  const m=new Map(), duplicates=new Set();
+  function put(k,rate){if(!k)return;if(m.has(k))duplicates.add(k);m.set(k,rate);}
+  rateRows.forEach(r=>{const rate=Number(r.rate),v=Number.isFinite(rate)&&rate>0?rate:null;put(r.payrollId?'pid:'+String(r.payrollId).trim().toLowerCase():'',v);put(r.username?'user:'+String(r.username).trim().toLowerCase():'',v);put(normalizeName(r.name||''),v);});
+  duplicates.forEach(k=>m.set(k,null));m.duplicateNames=duplicates;return m;
+}
+function lookupRate(rmap,row,fullname){for(const k of [employeeIdentityKey(row,fullname),row?.username?'user:'+String(row.username).trim().toLowerCase():'',normalizeName(fullname)]){if(k&&rmap.has(k))return {rate:rmap.get(k),key:k,duplicate:rmap.duplicateNames?.has(k)};}return {rate:null,key:employeeIdentityKey(row,fullname),duplicate:false};}
+function findHeaderIndex(headers, aliases){const norm=headers.map(normalizeHeader);return norm.findIndex(h=>aliases.includes(h));}
+function loadRateRowsFromAOA(matrix,label){
+  let hi=-1,nameIdx=-1,rateIdx=-1,notesIdx=-1,pidIdx=-1,userIdx=-1;
+  for(let r=0;r<Math.min(matrix.length,30);r++){const hdr=(matrix[r]||[]).map(v=>String(v??''));nameIdx=findHeaderIndex(hdr,['full name','employee','employee name','name']);rateIdx=findHeaderIndex(hdr,['pay rate','rate','hourly rate','hourly rates']);notesIdx=findHeaderIndex(hdr,['notes','note']);pidIdx=findHeaderIndex(hdr,['payroll id','payroll_id','employee id']);userIdx=findHeaderIndex(hdr,['username','user name']);if(nameIdx>=0&&rateIdx>=0){hi=r;break;}}
+  if(hi<0) throw new Error('Could not find Full Name/Employee and Pay Rate/Rate columns.');
+  const next=[];for(let r=hi+1;r<matrix.length;r++){const row=matrix[r]||[],name=String(row[nameIdx]??'').trim();if(!name&&!String(row[pidIdx]??'').trim()&&!String(row[userIdx]??'').trim())continue;next.push({payrollId:pidIdx>=0?String(row[pidIdx]??'').trim():'',username:userIdx>=0?String(row[userIdx]??'').trim():'',name,rate:safeNumber(row[rateIdx]),notes:notesIdx>=0?String(row[notesIdx]??''):''});}
+  rateRows=next;drawRateTable();document.getElementById('rateFileStatus').textContent=`Loaded ${rateRows.length} employee rates from ${label}.`;invalidatePreApproval();
+}
+function loadRateFile(f){const ext=f.name.split('.').pop().toLowerCase();if(ext==='csv'){Papa.parse(f,{skipEmptyLines:false,complete:r=>{try{loadRateRowsFromAOA(r.data,f.name)}catch(e){document.getElementById('rateFileStatus').textContent=e.message;}}});return;}const rd=new FileReader();rd.onload=e=>{try{const wb=XLSX.read(e.target.result,{type:'array',cellDates:true}),sn=wb.SheetNames.find(n=>/hourly\s*rates?|rate\s*master/i.test(n))||wb.SheetNames[0];loadRateRowsFromAOA(XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:'',raw:true}),f.name+' ('+sn+')');}catch(err){document.getElementById('rateFileStatus').textContent='Unable to read rate master: '+err.message;}};rd.readAsArrayBuffer(f);}
+renderRates();
+if(typeof XLSX==='undefined'||typeof Papa==='undefined'){const le=document.getElementById('libError');le.style.display='block';le.textContent='Could not load the spreadsheet libraries. Check your internet connection and reload this page.';}
+setTimeout(()=>{initDefaultWeeklyPeriod();const rs=document.getElementById('referenceRateStatus');if(rs)rs.textContent=String(rateRows.length)+' default';const st=document.getElementById('rateFileStatus');if(st&&rateRows.length)st.textContent='Default rates loaded. Review or edit as needed.';},0);
+document.getElementById('rateFileInput').addEventListener('change',e=>{if(e.target.files[0])loadRateFile(e.target.files[0]);e.target.value='';});
+let REFERENCE_STATE={uploaded:false,fileName:'',sheets:[]};
+function loadReferenceWorkbook(f){
+  const status=document.getElementById('referenceWorkbookStatus'),rateStatus=document.getElementById('referenceRateStatus');
+  status.textContent='Reading '+f.name+' ...';
+  const rd=new FileReader();
+  rd.onload=e=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+      const required=['Summary','Data','Overtime Calculation','RSC and REST','Hourly Rates'];
+      const missing=required.filter(n=>!wb.SheetNames.includes(n));
+      if(missing.length) throw new Error('Missing expected sheet(s): '+missing.join(', '));
+      const matrix=XLSX.utils.sheet_to_json(wb.Sheets['Hourly Rates'],{header:1,defval:'',raw:true});
+      loadRateRowsFromAOA(matrix,f.name+' (Hourly Rates)');
+      REFERENCE_STATE={uploaded:true,fileName:f.name,sheets:[...wb.SheetNames]};
+      status.textContent='Loaded: '+f.name;
+      rateStatus.textContent=String(rateRows.length);
+    }catch(err){
+      REFERENCE_STATE={uploaded:false,fileName:'',sheets:[]};
+      status.textContent='Reference validation failed: '+err.message;
+      rateStatus.textContent='0';
+    }
+  };
+  rd.readAsArrayBuffer(f);
+}
+document.getElementById('referenceWorkbookInput').addEventListener('change',e=>{if(e.target.files[0])loadReferenceWorkbook(e.target.files[0]);e.target.value='';});
+document.getElementById('gustoFileInput').addEventListener('change', e=>{ if(e.target.files[0]) loadGustoFile(e.target.files[0]); });
+
+/* ---------------- File upload ---------------- */
+let RAW_ROWS = null;
+let PAY_PERIOD_SOURCE = '';
+
+function onPeriodChange(){PAY_PERIOD_SOURCE='manual';invalidatePreApproval();}
+function toggleWeeklySetup(){
+  const box=document.getElementById('weeklySetupWrap');
+  if(!box)return;
+  box.style.display=box.style.display==='none'?'block':'none';
+  if(box.style.display==='block') box.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function initDefaultWeeklyPeriod(){
+  const freq=document.getElementById('payrollFrequency');
+  const start=document.getElementById('payPeriodStart');
+  const end=document.getElementById('payPeriodEnd');
+  if(freq)freq.value='Weekly';
+  if(!start||!end||start.value||end.value)return;
+  const now=new Date();
+  const day=(now.getDay()+6)%7; // Monday=0
+  const mon=new Date(now.getFullYear(),now.getMonth(),now.getDate()-day-7);
+  const sun=new Date(mon.getFullYear(),mon.getMonth(),mon.getDate()+6);
+  const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  start.value=iso(mon); end.value=iso(sun); PAY_PERIOD_SOURCE='default-week';
+  const h=document.getElementById('payPeriodHint');
+  if(h)h.textContent=`Defaulting to last week (${start.value} to ${end.value}). Dates are filled from the filename when possible. Edit them if needed.`;
+}
+
+function inclusiveCalendarDays(start,end){
+  if(!start||!end) return null;
+  const a=new Date(start+'T00:00:00Z'),b=new Date(end+'T00:00:00Z');
+  if(isNaN(a)||isNaN(b)) return null;
+  return Math.floor((b-a)/86400000)+1;
+}
+function expectedPeriodDays(){ return document.getElementById('payrollFrequency')?.value==='Biweekly'?14:7; }
+function onPayrollFrequencyChange(){
+  const f=document.getElementById('payrollFrequency')?.value||'Weekly',h=document.getElementById('payPeriodHint');
+  if(h) h.textContent=`${f} requires exactly ${f==='Biweekly'?14:7} calendar days. Regular / OT / Double Time are always calculated DAILY first, then aggregated into the selected pay period.`;
+  invalidatePreApproval();
+}
+function inferPayPeriodFromFilename(name){
+  const base=String(name||'');
+  let m=base.match(/(20\d{2})[-_.](\d{2})[-_.](\d{2}).*?(?:thru|through|to)[ _-]*(20\d{2})[-_.](\d{2})[-_.](\d{2})/i);
+  if(m) return {start:`${m[1]}-${m[2]}-${m[3]}`,end:`${m[4]}-${m[5]}-${m[6]}`};
+  m=base.match(/(\d{1,2})[.\/-](\d{1,2})[.\/-](20\d{2}).*?(?:thru|through|to)[ _-]*(\d{1,2})[.\/-](\d{1,2})[.\/-](20\d{2})/i);
+  if(m) return {start:`${m[3]}-${String(m[1]).padStart(2,'0')}-${String(m[2]).padStart(2,'0')}`,end:`${m[6]}-${String(m[4]).padStart(2,'0')}-${String(m[5]).padStart(2,'0')}`};
+  return null;
+}
+function autofillPayPeriodFromFilename(name){
+  const p=inferPayPeriodFromFilename(name),a=document.getElementById('payPeriodStart'),b=document.getElementById('payPeriodEnd'),h=document.getElementById('payPeriodHint'),freq=document.getElementById('payrollFrequency');
+  if(p){
+    a.value=p.start;b.value=p.end;PAY_PERIOD_SOURCE='filename';
+    const days=inclusiveCalendarDays(p.start,p.end);
+    if(freq&&days===7)freq.value='Weekly';
+    else if(freq&&days===14)freq.value='Biweekly';
+    if(h)h.textContent=`Auto-filled from filename: ${p.start} to ${p.end} (${days||'?'} calendar days). ${days===7?'Frequency set to Weekly.':days===14?'Frequency set to Biweekly.':'Select the correct frequency and correct the dates before processing.'}`;
+  }
+  else {PAY_PERIOD_SOURCE='manual';if(h)h.textContent='No complete pay-period range detected in filename. Enter Pay Period Start and Pay Period End manually. Weekly = 7 days; Biweekly = 14 days.';}
+  invalidatePreApproval();
+}
+const dz = document.getElementById('dropzone');
+['dragover','dragleave','drop'].forEach(ev=>dz.addEventListener(ev, e=>{ e.preventDefault(); dz.classList.toggle('drag', ev==='dragover'); }));
+dz.addEventListener('drop', e=>{ if(e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); });
+dz.addEventListener('click',e=>{if(!e.target.closest('label'))document.getElementById('fileInput').click();});
+document.getElementById('fileInput').addEventListener('change', e=>{ if(e.target.files[0]) loadFile(e.target.files[0]); e.target.value=''; });
+
+function loadFile(f){
+  autofillPayPeriodFromFilename(f.name);
+  document.getElementById('fileStatus').textContent = 'Reading '+f.name+' ...';
+  const ext = f.name.split('.').pop().toLowerCase();
+  const fail=m=>{document.getElementById('fileStatus').innerHTML='<span style="color:var(--bad)">Could not read file: '+escHtml(m)+'</span>';};
+  if(!['csv','xlsx','xls'].includes(ext)){fail('please upload a .csv, .xlsx or .xls file.');return;}
+  if(ext==='csv'){
+    Papa.parse(f,{header:true,skipEmptyLines:true,complete:res=>onRowsLoaded(res.data,f.name),error:err=>fail(err.message)});
+  } else {
+    const rd=new FileReader();
+    rd.onerror=()=>fail('file could not be opened');
+    rd.onload=ev=>{
+      try{
+        const wb=XLSX.read(ev.target.result,{type:'array',cellDates:true});
+        const sn = wb.SheetNames.includes('Data') ? 'Data' : wb.SheetNames[0];
+        onRowsLoaded(XLSX.utils.sheet_to_json(wb.Sheets[sn],{defval:''}), f.name+' ('+sn+')');
+      }catch(err){fail(err.message);}
+    };
+    rd.readAsArrayBuffer(f);
+  }
+}
+
+const REQUIRED = ['fname','lname','local_date','local_day','local_start_time','local_end_time','tz','hours','jobcode_1','jobcode_2','jobcode_3','location'];
+
+function onRowsLoaded(data, label){
+  data = data.filter(r=>Object.values(r).some(v=>v!==''&&v!==undefined&&v!==null));
+  if(!data.length){ document.getElementById('fileStatus').textContent='No rows found in '+label+'.'; return; }
+  const headers = Object.keys(data[0]);
+  const normMap = {};
+  headers.forEach(h=>{ normMap[String(h).trim().toLowerCase()] = h; });
+  const missing = REQUIRED.filter(c=>!(c in normMap));
+  if(missing.length){
+    document.getElementById('fileStatus').innerHTML = '<span style="color:var(--bad)">Validation error — missing required column(s): '+missing.join(', ')+'</span>';
+    document.getElementById('results').style.display='none';
+    RAW_ROWS=null;RESULT=null;
+    return;
+  }
+  RAW_ROWS = data.map((r,idx)=>{
+    const g = k => r[normMap[k]] ?? '';
+    return {
+      sourceRow: idx+2,
+      fname: String(g('fname')).trim(),
+      lname: String(g('lname')).trim(),
+      number: normMap['number'] ? r[normMap['number']] : '',
+      payroll_id: normMap['payroll_id'] ? String(r[normMap['payroll_id']]??'').trim() : '',
+      username: normMap['username'] ? String(r[normMap['username']]??'').trim() : '',
+      group: normMap['group'] ? r[normMap['group']] : '',
+      local_date: g('local_date'),
+      local_day: g('local_day'),
+      local_start_time: g('local_start_time'),
+      local_end_time: g('local_end_time'),
+      tz: g('tz'),
+      hours_raw: g('hours'),
+      jobcode_1: String(g('jobcode_1')).trim(),
+      jobcode_2: String(g('jobcode_2')).trim(),
+      jobcode_3: String(g('jobcode_3')).trim(),
+      location: g('location')
+    };
+  });
+  document.getElementById('fileStatus').textContent = RAW_ROWS.length+' rows loaded from '+label+'. Processing...';
+  document.getElementById('results').style.display='block';
+  process();
+  document.getElementById('fileStatus').textContent = RAW_ROWS.length+' rows loaded from '+label+'.';
+}
+
+/* ---------------- Helpers ---------------- */
+function toISODate(v){
+  if(v===''||v==null) return null;
+  if(v instanceof Date){ if(isNaN(v)) return null; const y=v.getFullYear(),m=String(v.getMonth()+1).padStart(2,'0'),d=String(v.getDate()).padStart(2,'0'); return `${y}-${m}-${d}`; }
+  const s=String(v).trim();
+  if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+  const parsed = new Date(s);
+  return isNaN(parsed) ? null : toISODate(parsed);
+}
+function isValidTimestamp(v){
+  if(v===''||v==null) return true; // absence handled separately
+  if(v instanceof Date) return !isNaN(v);
+  return !isNaN(new Date(String(v)));
+}
+function round2(v){ return Math.round((v+Number.EPSILON)*100)/100; }
+function roundMoney(v){ const n=Number(v); if(!Number.isFinite(n)) return n; return Math.sign(n)*Math.round((Math.abs(n)+1e-9)*100)/100; }
+function fmtH(v){ return v==null? '—' : round2(v).toFixed(2); }
+function fmtM(v){ return v==null? '—' : '$'+round2(v).toFixed(2); }
+
+/* ---------------- Single-source payroll engine ---------------- */
+function calculatePayroll(rows, rmap, rscEmployees=new Set()){
+  const tolerance = 0.01;
+  const employeeMap = new Map();
+  const validation = [];
+  const validDates = [];
+
+  rows.forEach((row, idx)=>{
+    const employeeName = String(row.fullname || ((row.fname||'')+' '+(row.lname||''))).trim().replace(/\s+/g,' ');
+    const employeeKey = row.employeeKey || employeeIdentityKey(row,employeeName);
+    const date = row.dateISO || toISODate(row.local_date);
+    const hours = Number(row.hours);
+    if(!employeeKey || !date || !Number.isFinite(hours)) return;
+    validDates.push(date);
+    if(!employeeMap.has(employeeKey)){
+      employeeMap.set(employeeKey,{employeeKey,employeeName,payrollId:row.payroll_id||'',username:row.username||'',rate:row.payrate!=null?row.payrate:(rmap.has(employeeKey)?rmap.get(employeeKey):null),isRSC:rscEmployees.has(employeeKey),dailyMap:new Map()});
+    }
+    const emp=employeeMap.get(employeeKey);
+    if(!emp.dailyMap.has(date)) emp.dailyMap.set(date,{date,rawHours:0,lunchHours:0,paidHours:0});
+    const day=emp.dailyMap.get(date);
+    day.rawHours += hours;
+    if(normalizeCode(row.jobcode_1)==='lunch break') day.lunchHours += hours;
+    else day.paidHours += hours; // Rest Break remains paid
+  });
+
+  const employees=[];
+  const dailyCalculation=[];
+  for(const emp of employeeMap.values()){
+    const daily=[];
+    let rawHours=0,lunchHours=0,paidHours=0,regularHours=0,overtimeHours=0,doubleHours=0;
+    const sorted=[...emp.dailyMap.values()].sort((a,b)=>a.date.localeCompare(b.date));
+    for(const day0 of sorted){
+      const day={...day0};
+      if(emp.isRSC){
+        // Approved existing behavior: RSC employees remain outside normal Reg/OT/Double payroll.
+        day.regularHours=null; day.overtimeHours=null; day.doubleHours=null;
+      } else {
+        day.regularHours=Math.min(day.paidHours,8);
+        day.overtimeHours=day.paidHours<=8?0:Math.min(day.paidHours-8,4);
+        day.doubleHours=Math.max(day.paidHours-12,0);
+        if(Math.abs(day.paidHours-(day.regularHours+day.overtimeHours+day.doubleHours))>tolerance){
+          validation.push({scope:'Daily',employee:emp.employeeName,date:day.date,reason:'CALCULATION MISMATCH: paid hours do not equal Regular + OT + Double'});
+        }
+        regularHours += day.regularHours;
+        overtimeHours += day.overtimeHours;
+        doubleHours += day.doubleHours;
+        dailyCalculation.push({employeeKey:emp.employeeKey,employeeName:emp.employeeName,date:day.date,rawHours:day.rawHours,lunchHours:day.lunchHours,paidHours:day.paidHours,regularHours:day.regularHours,overtimeHours:day.overtimeHours,doubleHours:day.doubleHours});
+      }
+      rawHours += day.rawHours; lunchHours += day.lunchHours; paidHours += day.paidHours;
+      daily.push(day);
+    }
+
+    const rate=emp.rate;
+    // Currency is rounded at the employee earning-component level before consolidation.
+    // This matches the approved QBO GL (e.g. 42.465 -> 42.47 for employee OT).
+    const regularPay = emp.isRSC || rate==null ? null : roundMoney(regularHours*rate);
+    const overtimePay = emp.isRSC || rate==null ? null : roundMoney(overtimeHours*rate*1.5);
+    const dtMult=getConfigNumber('doubleMultiplier');
+    const doublePay = emp.isRSC || rate==null ? null : (doubleHours<=GUSTO_TOLERANCE ? 0 : (dtMult==null ? null : roundMoney(doubleHours*rate*dtMult)));
+    const totalWages = regularPay==null || overtimePay==null || doublePay==null ? null : roundMoney(regularPay+overtimePay+doublePay);
+
+    if(!emp.isRSC){
+      const sumDailyPaid=daily.reduce((a,d)=>a+d.paidHours,0);
+      const sumDailyReg=daily.reduce((a,d)=>a+(d.regularHours||0),0);
+      const sumDailyOT=daily.reduce((a,d)=>a+(d.overtimeHours||0),0);
+      const sumDailyDouble=daily.reduce((a,d)=>a+(d.doubleHours||0),0);
+      if(Math.abs(paidHours-sumDailyPaid)>tolerance || Math.abs(regularHours-sumDailyReg)>tolerance || Math.abs(overtimeHours-sumDailyOT)>tolerance || Math.abs(doubleHours-sumDailyDouble)>tolerance || Math.abs(paidHours-(regularHours+overtimeHours+doubleHours))>tolerance){
+        validation.push({scope:'Employee',employee:emp.employeeName,date:'',reason:'CALCULATION MISMATCH: employee biweekly totals do not reconcile to daily results'});
+      }
+    }
+
+    employees.push({employeeKey:emp.employeeKey,employeeName:emp.employeeName,rate,isRSC:emp.isRSC,daily,totals:{rawHours,lunchHours,paidHours,regularHours,overtimeHours,doubleHours,regularPay,overtimePay,doublePay,totalWages}});
+  }
+  employees.sort((a,b)=>a.employeeName.localeCompare(b.employeeName));
+  dailyCalculation.sort((a,b)=>a.employeeName.localeCompare(b.employeeName)||a.date.localeCompare(b.date));
+
+  const standardEmployees=employees.filter(e=>!e.isRSC);
+  const consolidated=standardEmployees.reduce((acc,e)=>{
+    const t=e.totals;
+    acc.paidHours+=t.paidHours; acc.regularHours+=t.regularHours; acc.overtimeHours+=t.overtimeHours; acc.doubleHours+=t.doubleHours;
+    if(t.regularPay!=null) acc.regularPay+=t.regularPay;
+    if(t.overtimePay!=null) acc.overtimePay+=t.overtimePay;
+    if(t.doublePay!=null) acc.doublePay+=t.doublePay;
+    if(t.totalWages!=null) acc.totalWages+=t.totalWages;
+    return acc;
+  },{paidHours:0,regularHours:0,overtimeHours:0,doubleHours:0,regularPay:0,overtimePay:0,doublePay:0,totalWages:0});
+  consolidated.regularPay=roundMoney(consolidated.regularPay);
+  consolidated.overtimePay=roundMoney(consolidated.overtimePay);
+  consolidated.doublePay=roundMoney(consolidated.doublePay);
+  consolidated.totalWages=roundMoney(consolidated.regularPay+consolidated.overtimePay+consolidated.doublePay);
+
+  const check={paidHours:0,regularHours:0,overtimeHours:0,doubleHours:0,totalWages:0};
+  standardEmployees.forEach(e=>{check.paidHours+=e.totals.paidHours;check.regularHours+=e.totals.regularHours;check.overtimeHours+=e.totals.overtimeHours;check.doubleHours+=e.totals.doubleHours;if(e.totals.totalWages!=null)check.totalWages+=e.totals.totalWages;});
+  if(Math.abs(consolidated.paidHours-check.paidHours)>tolerance || Math.abs(consolidated.regularHours-check.regularHours)>tolerance || Math.abs(consolidated.overtimeHours-check.overtimeHours)>tolerance || Math.abs(consolidated.doubleHours-check.doubleHours)>tolerance || Math.abs(consolidated.totalWages-check.totalWages)>tolerance){
+    validation.push({scope:'Consolidated',employee:'',date:'',reason:'CALCULATION MISMATCH: consolidated totals do not equal employee totals'});
+  }
+
+  validDates.sort();
+  return {period:{start:validDates[0]||null,end:validDates[validDates.length-1]||null},employees,standardEmployees,dailyCalculation,consolidated,validation};
+}
+
+/* ---------------- Configurable master data ---------------- */
+let wcRateRows=[];
+let specialRuleRows=[];
+let aliasRows=[];
+function onPostPayrollConfigChange(){if(GUSTO_STATE.uploaded)recalcPostPayroll();else renderGustoCheckpoint();}
+function addWcRateRow(){wcRateRows.push({code:'',rate:null,notes:''});drawWcRateTable();onPostPayrollConfigChange();}
+function drawWcRateTable(){const t=document.getElementById('wcRateTable');if(!t)return;let h='<tr><th>WC Code</th><th>Rate</th><th>Notes</th><th></th></tr>';wcRateRows.forEach((r,i)=>h+=`<tr><td><input type="text" value="${escAttr(r.code)}" onchange="wcRateRows[${i}].code=this.value;onPostPayrollConfigChange()"></td><td><input type="number" step="0.000001" min="0" value="${r.rate??''}" onchange="wcRateRows[${i}].rate=this.value===''?null:Number(this.value);onPostPayrollConfigChange()"></td><td><input type="text" value="${escAttr(r.notes||'')}" onchange="wcRateRows[${i}].notes=this.value"></td><td><button onclick="wcRateRows.splice(${i},1);drawWcRateTable();onPostPayrollConfigChange()">✕</button></td></tr>`);t.innerHTML=h;}
+function addSpecialRuleRow(){specialRuleRows.push({identifier:'',wcCode:'',rule:'NONE',feePct:null,allocationPct:null});drawSpecialRuleTable();onPostPayrollConfigChange();}
+function drawSpecialRuleTable(){const t=document.getElementById('specialRuleTable');if(!t)return;let h='<tr><th>Employee Identifier</th><th>WC Code</th><th>Special Rule</th><th>Service Fee %</th><th>Allocation %</th><th></th></tr>';specialRuleRows.forEach((r,i)=>h+=`<tr><td><input type="text" value="${escAttr(r.identifier)}" onchange="specialRuleRows[${i}].identifier=this.value;onPostPayrollConfigChange()"></td><td><input type="text" value="${escAttr(r.wcCode)}" onchange="specialRuleRows[${i}].wcCode=this.value;onPostPayrollConfigChange()"></td><td><select onchange="specialRuleRows[${i}].rule=this.value;onPostPayrollConfigChange()"><option ${r.rule==='NONE'?'selected':''}>NONE</option><option ${r.rule==='HZ_EL'?'selected':''}>HZ_EL</option><option ${r.rule==='PAUL_ALLOCATION'?'selected':''}>PAUL_ALLOCATION</option></select></td><td><input type="number" step="0.01" min="0" value="${r.feePct??''}" onchange="specialRuleRows[${i}].feePct=this.value===''?null:Number(this.value);onPostPayrollConfigChange()"></td><td><input type="number" step="0.01" min="0" value="${r.allocationPct??''}" onchange="specialRuleRows[${i}].allocationPct=this.value===''?null:Number(this.value);onPostPayrollConfigChange()"></td><td><button onclick="specialRuleRows.splice(${i},1);drawSpecialRuleTable();onPostPayrollConfigChange()">✕</button></td></tr>`);t.innerHTML=h;}
+function addAliasRow(){aliasRows.push({source:'',gusto:'',notes:''});drawAliasTable();onPostPayrollConfigChange();}
+function drawAliasTable(){const t=document.getElementById('aliasTable');if(!t)return;let h='<tr><th>Timesheet ID / Username / Name</th><th>Gusto Employee Name</th><th>Notes</th><th></th></tr>';aliasRows.forEach((r,i)=>h+=`<tr><td><input type="text" value="${escAttr(r.source)}" onchange="aliasRows[${i}].source=this.value;onPostPayrollConfigChange()"></td><td><input type="text" value="${escAttr(r.gusto)}" onchange="aliasRows[${i}].gusto=this.value;onPostPayrollConfigChange()"></td><td><input type="text" value="${escAttr(r.notes||'')}" onchange="aliasRows[${i}].notes=this.value"></td><td><button onclick="aliasRows.splice(${i},1);drawAliasTable();onPostPayrollConfigChange()">✕</button></td></tr>`);t.innerHTML=h;}
+function wcRateMap(){const m=new Map(),dups=new Set();wcRateRows.forEach(r=>{const k=String(r.code||'').trim(),v=Number(r.rate);if(!k)return;if(m.has(k))dups.add(k);m.set(k,Number.isFinite(v)&&v>=0?v:null);});dups.forEach(k=>m.set(k,null));m.duplicates=dups;return m;}
+function aliasTargetForEmployee(e){const candidates=[e.employeeKey,e.payrollId,e.username,e.employeeName].filter(Boolean).map(x=>String(x).trim().toLowerCase());for(const a of aliasRows){if(candidates.includes(String(a.source||'').trim().toLowerCase()))return String(a.gusto||'').trim();}return e.employeeName;}
+function resolveRuleActualName(rule){const id=String(rule.identifier||'').trim();const a=aliasRows.find(x=>String(x.source||'').trim().toLowerCase()===id.toLowerCase());return a&&a.gusto?String(a.gusto).trim():id;}
+function configSnapshot(){return {doubleMultiplier:getConfigNumber('doubleMultiplier'),wcRates:wcRateMap(),specialRules:specialRuleRows.map(x=>({...x})),aliases:aliasRows.map(x=>({...x}))};}
+drawWcRateTable();drawSpecialRuleTable();drawAliasTable();
+
+/* ---------------- Post-payroll Gusto General Report ---------------- */
+const GUSTO_TOLERANCE = 0.01;
+function gustoWithinTolerance(a,b){ return a!=null && b!=null && Math.abs(Number(a)-Number(b))<=GUSTO_TOLERANCE+1e-9; }
+function normalizeHeader(v=""){return String(v).trim().toLowerCase().replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim();}
+function safeNumber(v){if(v===null||v===undefined||v==='')return null;if(typeof v==='number')return Number.isFinite(v)?v:null;const c=String(v).trim().replace(/[$,]/g,'').replace(/^\((.*)\)$/,'-$1');const n=Number(c);return Number.isFinite(n)?n:null;}
+function escHtml(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function getConfigNumber(id){const e=document.getElementById(id);if(!e||String(e.value).trim()==='')return null;const n=Number(e.value);return Number.isFinite(n)?n:null;}
+function money(v){return v==null?null:roundMoney(v);}
+let GUSTO_STATE=makeEmptyGustoState();
+function makeEmptyGustoState(){return {uploaded:false,fileName:'',sheets:{},basic:null,detailed:null,wcSource:null,hzSource:null,paulSource:null,actual:{},employeeActual:new Map(),comparison:null,calc:null,warnings:[],status:'NOT CHECKED',taxAssignmentValid:false,taxAssignmentMessage:'NOT CHECKED'};}
+function parseLedgerMatrix(matrix,sheetName){
+  let header=-1;for(let i=0;i<Math.min(50,matrix.length);i++){const n=(matrix[i]||[]).map(normalizeHeader);if(n.includes('account type')&&n.includes('account description')&&n.includes('debit')&&n.includes('credit')){header=i;break;}}
+  if(header<0) return {sheetName,error:'Ledger header not found',rows:[],metadata:matrix.slice(0,10)};
+  const hdr=(matrix[header]||[]).map(v=>String(v??''));const idx={};hdr.forEach((h,i)=>idx[normalizeHeader(h)]=i);const rows=[];
+  for(let r=header+1;r<matrix.length;r++){const vals=matrix[r]||[];const type=String(vals[idx['account type']]??'').trim(),desc=String(vals[idx['account description']]??'').trim();if(!type&&normalizeHeader(desc)==='totals')break;if(!type&&!desc)continue;rows.push({sourceRow:r+1,type,desc,debit:safeNumber(vals[idx['debit']]),credit:safeNumber(vals[idx['credit']])});}
+  return {sheetName,header,rows,metadata:matrix.slice(0,header)};
+}
+function extractEmployeeFromWageDesc(desc){const m=String(desc||'').match(/(?:Regular|Overtime|Double[- ]?Time|Sick Time Off) Wages? for (.+)$/i)||String(desc||'').match(/Sick Time Off for (.+)$/i);return m?m[1].trim():null;}
+function parseActualPayroll(basic,detailed){
+  const bRows=basic?.rows||[],dRows=detailed?.rows||[],sum=(rows,pred,side='debit')=>money(rows.filter(pred).reduce((a,r)=>a+(Number(r[side])||0),0)),nt=r=>normalizeHeader(r.type);
+  const actual={regularWages:sum(bRows,r=>nt(r)==='regularwages'),overtimeWages:sum(bRows,r=>nt(r)==='overtimewages'),doubleWages:sum(bRows,r=>/double/.test(nt(r))&&/wage/.test(nt(r))),sickTime:sum(bRows,r=>nt(r)==='sicktimeoff'),employerTax:sum(bRows,r=>nt(r)==='employertax'),netPay:sum(bRows,r=>nt(r)==='debitnetpay','credit'),debitTax:sum(bRows,r=>nt(r)==='debittax','credit'),employeeChecks:sum(bRows,r=>nt(r)==='employeepaymentcheck','credit'),deductions:sum(bRows,r=>nt(r)==='garnishment','credit'),totalDebit:money(bRows.reduce((a,r)=>a+(Number(r.debit)||0),0)),totalCredit:money(bRows.reduce((a,r)=>a+(Number(r.credit)||0),0))};actual.balanced=gustoWithinTolerance(actual.totalDebit,actual.totalCredit);
+  const employeeMap=new Map(),order=[];for(const r of dRows){const type=nt(r);if(['regularwages','overtimewages','sicktimeoff'].includes(type)||/double/.test(type)){const emp=extractEmployeeFromWageDesc(r.desc);if(!emp)continue;const k=normalizeName(emp);if(!employeeMap.has(k)){employeeMap.set(k,{employeeName:emp,regular:0,ot:0,double:0,sick:0,employerTax:null,taxSource:'not assigned'});order.push(k);}const e=employeeMap.get(k);if(type==='regularwages')e.regular+=Number(r.debit)||0;else if(type==='overtimewages')e.ot+=Number(r.debit)||0;else if(type==='sicktimeoff')e.sick+=Number(r.debit)||0;else e.double+=Number(r.debit)||0;}}
+  const taxRows=dRows.filter(r=>nt(r)==='employertax'),taxAssignmentValid=order.length>0&&taxRows.length===order.length*2;let taxAssignmentMessage=`Employer tax rows: ${taxRows.length}; wage employees: ${order.length}; expected tax rows: ${order.length*2}.`;
+  if(taxAssignmentValid){order.forEach((k,i)=>{const a=taxRows[i*2],b=taxRows[i*2+1],e=employeeMap.get(k);e.employerTax=money((Number(a.debit)||0)+(Number(b.debit)||0));e.taxSource=`Detailed rows ${a.sourceRow} + ${b.sourceRow} (positional; row-order dependent)`;});taxAssignmentMessage+=' COUNT GUARD PASSED ONLY. Employee-to-tax association still depends on the Gusto Detailed row order and is not independently proven by the row count. Review the row ordering before relying on employee-level tax allocation.';}else taxAssignmentMessage+=' SPECIAL CALCULATIONS BLOCKED — employer tax cannot be safely assigned.';
+  return {actual,employeeMap,employeeOrder:order,taxRowsCount:taxRows.length,taxAssignmentValid,taxAssignmentMessage};
+}
+function parseWCConfigFromSource(matrix){const rows=[];for(let r=0;r<matrix.length;r++){const row=matrix[r]||[],code=safeNumber(row[4]),rate=safeNumber(row[10]);if(code!=null)rows.push({code:String(Math.trunc(code)),label:String(row[9]??''),rate});}return rows;}
+function parseCodeRatesFromMatrix(matrix){const out=[];for(let r=0;r<(matrix||[]).length;r++){const row=matrix[r]||[];for(let c=0;c<row.length;c++){const m=String(row[c]??'').match(/code\s*(\d{4})/i);if(!m)continue;let rate=null;for(let j=c-1;j>=0;j--){const n=safeNumber(row[j]);if(n!=null){rate=n;break;}}if(rate!=null)out.push({code:m[1],rate,sourceRow:r+1});}}return out;}
+function wcSourceValidation(cfg){const wcSrc=new Map((GUSTO_STATE.sourceWcConfig||[]).filter(x=>x.rate!=null).map(x=>[x.code,x.rate])),hzSrc=new Map(parseCodeRatesFromMatrix(GUSTO_STATE.hzSource).map(x=>[x.code,x.rate])),codes=[...new Set([...wcSrc.keys(),...hzSrc.keys(),...cfg.wcRates.keys()])].sort();return codes.map(code=>{const configured=cfg.wcRates.get(code)??null,wc=wcSrc.get(code)??null,hz=hzSrc.get(code)??null,conflict=wc!=null&&hz!=null&&Math.abs(wc-hz)>1e-12,configuredDiff=(configured!=null&&((wc!=null&&Math.abs(configured-wc)>1e-12)||(hz!=null&&Math.abs(configured-hz)>1e-12)));return {code,configured,wc,hz,conflict,configuredDiff,status:conflict?'SOURCE CONFLICT — REVIEW REQUIRED':configuredDiff?'CONFIGURATION DIFFERS FROM SOURCE — REVIEW REQUIRED':'OK'};});}
+function ruleForEmployeeName(name){const n=String(name||'').trim().toLowerCase();return specialRuleRows.find(r=>String(resolveRuleActualName(r)||'').trim().toLowerCase()===n)||null;}
+function calcWCFromActual(employeeMap,cfg){const warnings=[],groups=new Map();for(const [k,e] of employeeMap){const rule=ruleForEmployeeName(e.employeeName),code=String(rule?.wcCode||'').trim();if(!code){warnings.push(`WC code is not explicitly mapped for ${e.employeeName} — Needs Review.`);continue;}if(!groups.has(code))groups.set(code,{code,label:'Explicitly mapped employees',rate:cfg.wcRates.get(code)??null,regular:0,overtime:0});const g=groups.get(code);g.regular+=e.regular+e.sick;g.overtime+=e.ot+e.double;}
+  for(const g of groups.values()){g.otWcBasis=g.overtime*2/3;g.wcBasis=g.regular+g.otWcBasis;g.wcAmount=g.rate==null?null:g.wcBasis*g.rate;if(g.wcBasis>0&&g.rate==null)warnings.push(`Missing configured WC rate for code ${g.code}.`);}return {groups:[...groups.values()],warnings};}
+function calcSpecialRules(employeeMap,cfg,taxAssignmentValid){const warnings=[],hzEl=[],paul=[];for(const rule of cfg.specialRules){if(!rule.identifier||rule.rule==='NONE')continue;const actualName=resolveRuleActualName(rule),e=employeeMap.get(normalizeName(actualName));if(!e){warnings.push(`Special rule ${rule.rule}: employee not found in Gusto Detailed for configured identifier ${rule.identifier}.`);continue;}const code=String(rule.wcCode||'').trim(),wcRate=code?cfg.wcRates.get(code)??null:null,reg=e.regular+e.sick,ot=e.ot+e.double,exempt=ot/3,otAfter=ot-exempt,wcBasis=reg+otAfter,wc=wcRate==null?null:wcBasis*wcRate,wages=reg+ot,tax=taxAssignmentValid?e.employerTax:null,feePct=rule.feePct==null?null:Number(rule.feePct);let fee=null,invoiceTotal=null;
+    if(!taxAssignmentValid)warnings.push(`${e.employeeName}: employer tax assignment is not validated; special calculation blocked.`);if(wcRate==null)warnings.push(`${e.employeeName}: WC rate is not configured for code ${code||'(blank)'}.`);if(rule.rule==='HZ_EL'&&feePct==null)warnings.push(`${e.employeeName}: HZ_EL service fee is not configured — Needs Review.`);
+    if(tax!=null&&wc!=null){const subtotal=wages+tax+wc;if(feePct!=null)fee=subtotal*feePct/100;invoiceTotal=feePct==null?null:subtotal+fee;}
+    const x={name:e.employeeName,identifier:rule.identifier,rule:rule.rule,wcCode:code,regular:reg,ot,exempt,otAfter,wcBasis,wcRate,wc,employerTax:tax,taxSource:e.taxSource,wages,feePct,fee,invoiceTotal,allocationPct:rule.allocationPct==null?null:Number(rule.allocationPct),allocation:null};
+    if(rule.rule==='PAUL_ALLOCATION'){if(x.feePct==null)warnings.push(`${e.employeeName}: PAUL_ALLOCATION service fee % is missing.`);if(x.allocationPct==null)warnings.push(`${e.employeeName}: PAUL_ALLOCATION allocation % is missing.`);if(x.invoiceTotal!=null&&x.allocationPct!=null){const a=x.allocationPct/100;x.allocation={wages:x.wages*a,employerTax:x.employerTax*a,wc:x.wc*a,fee:x.fee*a,totalPay:x.invoiceTotal*a};}paul.push(x);}else hzEl.push(x);
+  }return {hzEl,paul,warnings};}
+function buildPostPayrollComparison(){if(!RESULT||!GUSTO_STATE.uploaded)return null;const pRows=RESULT.payroll.standardEmployees.map(e=>({employee:e.employeeName,employeeKey:e.employeeKey,payrollId:e.payrollId||'',username:e.username||'',gustoName:aliasTargetForEmployee(e),pRegular:e.totals.regularPay,pOT:e.totals.overtimePay,pDouble:e.totals.doublePay}));const actualMap=GUSTO_STATE.employeeActual,used=new Set(),rows=[];for(const p of pRows){const k=normalizeName(p.gustoName),g=actualMap.get(k),reasons=[];if(!g)reasons.push('PREPARED EMPLOYEE NOT FOUND IN GUSTO — alias may be required');else used.add(k);const vals={gRegular:g?money(g.regular):null,gOT:g?money(g.ot):null,gDouble:g?money(g.double):null};if(g&&!gustoWithinTolerance(p.pRegular??0,vals.gRegular??0))reasons.push('REGULAR MISMATCH');if(g&&!gustoWithinTolerance(p.pOT??0,vals.gOT??0))reasons.push('OT MISMATCH');if(g&&!gustoWithinTolerance(p.pDouble??0,vals.gDouble??0))reasons.push('DOUBLE-TIME MISMATCH');rows.push({...p,...vals,regularDiff:g?money((p.pRegular??0)-(vals.gRegular??0)):null,otDiff:g?money((p.pOT??0)-(vals.gOT??0)):null,doubleDiff:g?money((p.pDouble??0)-(vals.gDouble??0)):null,status:reasons.length?'MISMATCH':'MATCH',reason:reasons.join('; ')});}
+  for(const [k,g] of actualMap)if(!used.has(k))rows.push({employee:'—',gustoName:g.employeeName,pRegular:null,pOT:null,pDouble:null,gRegular:money(g.regular),gOT:money(g.ot),gDouble:money(g.double),regularDiff:null,otDiff:null,doubleDiff:null,status:'MISMATCH',reason:'GUSTO EMPLOYEE NOT FOUND IN PREPARED PAYROLL — alias may be required'});return {rows,passed:rows.length>0&&rows.every(r=>r.status==='MATCH')};}
+function onGustoWorkbook(wb,fileName){
+  const required=['Basic','Detailed','WC','HZ & EL','Paul'];const missing=required.filter(n=>!wb.SheetNames.some(s=>normalizeHeader(s)===normalizeHeader(n)));
+  GUSTO_STATE=makeEmptyGustoState();GUSTO_STATE.uploaded=true;GUSTO_STATE.fileName=fileName;
+  for(const name of wb.SheetNames)GUSTO_STATE.sheets[name]=XLSX.utils.sheet_to_json(wb.Sheets[name],{header:1,defval:'',raw:true});
+  if(missing.length){GUSTO_STATE.warnings.push('Missing required sheet(s): '+missing.join(', '));GUSTO_STATE.status='BLOCKED — INVALID GUSTO GENERAL REPORT';renderGustoCheckpoint();return;}
+  const find=n=>wb.SheetNames.find(s=>normalizeHeader(s)===normalizeHeader(n));
+  GUSTO_STATE.basic=parseLedgerMatrix(GUSTO_STATE.sheets[find('Basic')],find('Basic'));GUSTO_STATE.detailed=parseLedgerMatrix(GUSTO_STATE.sheets[find('Detailed')],find('Detailed'));GUSTO_STATE.wcSource=GUSTO_STATE.sheets[find('WC')];GUSTO_STATE.hzSource=GUSTO_STATE.sheets[find('HZ & EL')];GUSTO_STATE.paulSource=GUSTO_STATE.sheets[find('Paul')];
+  const parsed=parseActualPayroll(GUSTO_STATE.basic,GUSTO_STATE.detailed);GUSTO_STATE.actual=parsed.actual;GUSTO_STATE.employeeActual=parsed.employeeMap;GUSTO_STATE.taxAssignmentValid=parsed.taxAssignmentValid;GUSTO_STATE.taxAssignmentMessage=parsed.taxAssignmentMessage;GUSTO_STATE.sourceWcConfig=parseWCConfigFromSource(GUSTO_STATE.wcSource);
+  recalcPostPayroll();document.getElementById('gustoFileStatus').textContent=`Loaded ${fileName}: Basic, Detailed, WC, HZ & EL, Paul.${PRE_APPROVAL.status==='APPROVED'?'':' Validation completed in test mode; pre-payroll approval is still required for final readiness.'}`;
+}
+function loadGustoFile(f){
+  if(!RESULT){
+    document.getElementById('gustoFileStatus').textContent='Process the Timesheet first.';
+    return;
+  }
+  if(PRE_APPROVAL.status!=='APPROVED'){
+    document.getElementById('gustoFileStatus').innerHTML='<span class="badge b-warn">APPROVAL REQUIRED</span> Complete Step 3 approval before uploading Gusto.';
+    return;
+  }
+  document.getElementById('gustoFileStatus').textContent='Reading Gusto General Report...';
+  const rd=new FileReader();
+  rd.onload=e=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+      onGustoWorkbook(wb,f.name);
+    }catch(err){
+      GUSTO_STATE=makeEmptyGustoState();
+      GUSTO_STATE.status='BLOCKED — READ ERROR';
+      GUSTO_STATE.warnings=[err.message];
+      renderGustoCheckpoint();
+    }
+  };
+  rd.readAsArrayBuffer(f);
+}
+function recalcPostPayroll(){if(!GUSTO_STATE.uploaded)return;const cfg=configSnapshot();GUSTO_STATE.comparison=buildPostPayrollComparison();const wc=calcWCFromActual(GUSTO_STATE.employeeActual,cfg),sp=calcSpecialRules(GUSTO_STATE.employeeActual,cfg,GUSTO_STATE.taxAssignmentValid),sourceValidation=wcSourceValidation(cfg);GUSTO_STATE.calc={wc,...sp,sourceValidation};const sourceWarnings=sourceValidation.filter(x=>x.conflict||x.configuredDiff).map(x=>`WC ${x.code}: Configured=${x.configured??'NOT CONFIGURED'}, WC sheet=${x.wc??'N/A'}, HZ & EL sheet=${x.hz??'N/A'} — ${x.status}`);GUSTO_STATE.warnings=[...new Set([...(GUSTO_STATE.warnings||[]),...wc.warnings,...sp.warnings,...sourceWarnings])];if(!GUSTO_STATE.taxAssignmentValid)GUSTO_STATE.warnings.push(GUSTO_STATE.taxAssignmentMessage);if(!GUSTO_STATE.actual.balanced)GUSTO_STATE.warnings.push('Basic sheet is out of balance.');GUSTO_STATE.status=GUSTO_STATE.comparison?.passed&&!GUSTO_STATE.warnings.length?'MATCHED — POST-PAYROLL RECONCILED':'REVIEW REQUIRED';renderGustoCheckpoint();updateOverallReadiness();const st=document.getElementById('gustoFileStatus');if(st)st.innerHTML=GUSTO_STATE.status.startsWith('MATCHED')?'<span class="badge b-ok">✓ GUSTO CONFIRMED</span> Prepared wage amounts match the uploaded Gusto export.':'<span class="badge b-warn">REVIEW / CHANGE NEEDED</span> Correct the weekly inputs if required, process again, approve again, then re-upload Gusto.';}
+let PRE_APPROVAL={status:'NOT REVIEWED',preparedBy:'',reviewer:'',comments:'',timestamp:''};
+function qboReconStatus(){return {entered:false,matched:false,diff:null};}
+function getPrePayrollReadiness(){
+  if(!RESULT)return 'NOT READY — TIMESHEET REQUIRED';
+  if(RESULT.review.some(r=>r.severity==='Blocking'))return 'BLOCKED — TECHNICAL REVIEW REQUIRED';
+  if(RESULT.stats.doubleHours>GUSTO_TOLERANCE&&getConfigNumber('doubleMultiplier')==null)return 'BLOCKED — DOUBLE TIME CONFIG REQUIRED';
+  if(PRE_APPROVAL.status==='APPROVED')return 'APPROVED — READY FOR GUSTO';
+  if(PRE_APPROVAL.status==='SENT BACK')return 'SENT BACK — CORRECTION REQUIRED';
+  return 'READY — APPROVAL REQUIRED';
+}
+function getFinalReadiness(){const pre=getPrePayrollReadiness();if(PRE_APPROVAL.status!=='APPROVED')return pre;if(!GUSTO_STATE.uploaded)return 'PRE-PAYROLL APPROVED — AWAITING GUSTO GENERAL REPORT';if(!GUSTO_STATE.comparison?.passed)return 'BLOCKED — EMPLOYEE-LEVEL GUSTO RECONCILIATION';if(GUSTO_STATE.warnings.length&&(wcRateRows.length||specialRuleRows.length))return 'REVIEW REQUIRED — WC / SPECIAL CALCULATION WARNING';return 'MATCHED — WAGES RECONCILED';}
+function invalidatePreApproval(){if(PRE_APPROVAL.status==='APPROVED'){PRE_APPROVAL={...PRE_APPROVAL,status:'NOT REVIEWED',timestamp:''};if(GUSTO_STATE.uploaded){GUSTO_STATE=makeEmptyGustoState();const fs=document.getElementById('gustoFileStatus');if(fs)fs.textContent='Weekly payroll inputs changed. Reprocess if needed, complete Step 3 approval again, then re-upload Gusto.';}}renderPrePayrollReview();if(RESULT)updateOverallReadiness();}
+function approvePrePayroll(){
+  const readiness=getPrePayrollReadiness();
+  if(readiness!=='READY — APPROVAL REQUIRED'){
+    renderPrePayrollReview('Resolve blocking review items before approval.');
+    return;
+  }
+  const warnCount=new Set(RESULT.review.filter(r=>r.severity!=='Blocking').map(r=>r.sourceRow+'|'+r.reason)).size;
+  if(warnCount&&!confirm('There are '+warnCount+' warning(s) in the Review tab (e.g. duplicate rows are still counted in payroll). Approve anyway?'))return;
+  PRE_APPROVAL={
+    status:'APPROVED',
+    preparedBy:'',
+    reviewer:'',
+    comments:'',
+    timestamp:new Date().toISOString()
+  };
+  renderPrePayrollReview('Approved successfully. Gusto upload is now unlocked.');
+  renderGustoCheckpoint();
+  updateOverallReadiness();
+}
+function sendBackPrePayroll(){PRE_APPROVAL={status:'SENT BACK',preparedBy:'',reviewer:'',comments:'',timestamp:new Date().toISOString()};renderPrePayrollReview();updateOverallReadiness();}
+function renderPrePayrollReview(extra=''){
+  const grid=document.getElementById('preApprovalStatusGrid'),
+        box=document.getElementById('approvalBox'),
+        emp=document.getElementById('prePayrollEmployeeReview'),
+        panel=document.getElementById('prePayrollReviewPanel'),
+        approveBtn=document.getElementById('approveBtn');
+  if(!grid||!box)return;
+
+  const st=getPrePayrollReadiness();
+  const approved=PRE_APPROVAL.status==='APPROVED';
+  const sentBack=PRE_APPROVAL.status==='SENT BACK';
+  const cls=approved?'b-ok':sentBack||st.includes('BLOCKED')?'b-bad':'b-warn';
+
+  grid.innerHTML=
+    `<div class="stat"><div class="n"><span class="badge ${cls}">${escHtml(st)}</span></div><div class="l">Approval Status</div></div>`+
+    `<div class="stat"><div class="n">${RESULT?RESULT.review.filter(x=>x.severity==='Blocking').length:0}</div><div class="l">Blocking Review Items</div></div>`;
+
+  if(emp&&RESULT){
+    emp.innerHTML=`<h2>Employee Payroll Review</h2><div class="overflow"><table>
+      <tr><th>Identity</th><th>Employee</th><th>Rate</th><th>Hours</th><th>Regular</th><th>OT</th><th>Double</th><th>Payroll Total / Handling</th><th>Warnings / Errors</th></tr>
+      ${RESULT.payroll.employees.map(e=>{
+        const t=e.totals;
+        const w=RESULT.review.filter(x=>normalizeName(x.employee)===normalizeName(e.employeeName)).map(x=>x.reason).join('; ');
+        if(e.isRSC){
+          return `<tr class="${w?'problem':''}">
+            <td>${escHtml(e.employeeKey)}</td><td>${escHtml(e.employeeName)}</td>
+            <td>${e.rate==null?'MISSING':fmtM(e.rate)}</td><td>${fmtH(t.paidHours)}</td>
+            <td colspan="3"><span class="rsc-chip">RSC + REST</span></td>
+            <td>Handled in RSC + Rest</td><td>${escHtml(w||'—')}</td></tr>`;
+        }
+        return `<tr class="${w?'problem':''}">
+          <td>${escHtml(e.employeeKey)}</td><td>${escHtml(e.employeeName)}</td>
+          <td>${e.rate==null?'MISSING':fmtM(e.rate)}</td><td>${fmtH(t.paidHours)}</td>
+          <td>${fmtH(t.regularHours)}</td><td>${fmtH(t.overtimeHours)}</td><td>${fmtH(t.doubleHours)}</td>
+          <td>${t.totalWages==null?'NEEDS REVIEW':fmtM(t.totalWages)}</td><td>${escHtml(w||'—')}</td></tr>`;
+      }).join('')}
+    </table></div>`;
+  }
+
+  box.className='ready-box '+(approved?'approval-ok':sentBack?'approval-bad':'');
+  box.innerHTML=approved
+    ? `<strong>✓ APPROVED</strong><div class="small">Approved &bull; ${escHtml(new Date(PRE_APPROVAL.timestamp).toLocaleString())}<br>Gusto upload is unlocked.</div>`
+    : `<strong>${escHtml(PRE_APPROVAL.status)}</strong><div class="small">${extra?'<b>'+escHtml(extra)+'</b><br>':''}Readiness: ${escHtml(st)}</div>`;
+
+  if(panel){
+    panel.classList.remove('panel-approved','panel-review');
+    if(approved)panel.classList.add('panel-approved');
+    else if(sentBack||st.includes('BLOCKED'))panel.classList.add('panel-review');
+  }
+
+  if(approveBtn){
+    approveBtn.disabled=approved;
+    approveBtn.textContent=approved?'✓ Approved':'Approve for Gusto';
+    approveBtn.classList.toggle('approved-btn',approved);
+  }
+
+  const input=document.getElementById('gustoFileInput'),
+        label=document.getElementById('gustoUploadLabel'),
+        unlocked=approved;
+  if(input)input.disabled=!unlocked;
+  if(label){
+    label.style.opacity=unlocked?'1':'0.55';
+    label.style.cursor=unlocked?'pointer':'not-allowed';
+  }
+
+  const gs=document.getElementById('gustoFileStatus');
+  if(gs&&!GUSTO_STATE.uploaded){
+    gs.innerHTML=unlocked
+      ? '<span class="badge b-ok">READY</span> Approval complete — upload the Gusto export now.'
+      : '<span class="badge b-warn">LOCKED</span> Complete Step 3 approval to unlock Gusto upload.';
+  }
+}
+function renderGustoCheckpoint(){const grid=document.getElementById('gustoStatusGrid'),box=document.getElementById('gustoComparisonBox'),panel=document.getElementById('gustoCheckpointPanel');if(!grid||!box)return;const final=getFinalReadiness(),cls=final.includes('MATCHED')?'b-ok':final.includes('AWAITING')?'b-warn':'b-bad';if(panel){panel.classList.remove('panel-approved','panel-ready','panel-review');if(final.includes('MATCHED'))panel.classList.add('panel-approved');else if(PRE_APPROVAL.status==='APPROVED'&&!GUSTO_STATE.uploaded)panel.classList.add('panel-ready');else if(GUSTO_STATE.uploaded)panel.classList.add('panel-review');}grid.innerHTML=`<div class="stat"><div class="n"><span class="badge ${cls}">${escHtml(final)}</span></div><div class="l">Gusto Confirmation Status</div></div>`+(GUSTO_STATE.uploaded?`<div class="stat"><div class="n">${GUSTO_STATE.actual.balanced?'YES':'NO'}</div><div class="l">Basic Debit = Credit</div></div><div class="stat"><div class="n">${GUSTO_STATE.taxAssignmentValid?'PASS':'BLOCK'}</div><div class="l">Employer Tax 2× Count Check</div></div>`:'');if(!GUSTO_STATE.uploaded){box.innerHTML=PRE_APPROVAL.status==='APPROVED'?'<div class="ready-box approval-ok"><strong>READY FOR GUSTO</strong><div class="small">Approval is complete. Use the Upload Gusto General Report button above.</div></div>':'<div class="ready-box"><strong>WAITING FOR APPROVAL</strong><div class="small">Complete Step 3 approval first.</div></div>';return;}let html='';if(GUSTO_STATE.warnings.length)html+=`<div class="note"><strong>Warnings / errors</strong><br>${[...new Set(GUSTO_STATE.warnings)].map(escHtml).join('<br>')}</div>`;const c=GUSTO_STATE.comparison;if(c){html+=`<h2>Employee-by-Employee Prepared vs Gusto</h2><div class="overflow"><table><tr><th>Prepared Employee</th><th>Gusto Employee</th><th>Prepared Regular</th><th>Gusto Regular</th><th>Diff</th><th>Prepared OT</th><th>Gusto OT</th><th>Diff</th><th>Prepared Double</th><th>Gusto Double</th><th>Diff</th><th>Status</th><th>Reason</th></tr>${c.rows.map(r=>`<tr class="${r.status==='MATCH'?'':'problem'}"><td>${escHtml(r.employee)}</td><td>${escHtml(r.gustoName)}</td><td>${r.pRegular==null?'—':fmtM(r.pRegular)}</td><td>${r.gRegular==null?'—':fmtM(r.gRegular)}</td><td>${r.regularDiff==null?'—':fmtM(r.regularDiff)}</td><td>${r.pOT==null?'—':fmtM(r.pOT)}</td><td>${r.gOT==null?'—':fmtM(r.gOT)}</td><td>${r.otDiff==null?'—':fmtM(r.otDiff)}</td><td>${r.pDouble==null?'—':fmtM(r.pDouble)}</td><td>${r.gDouble==null?'—':fmtM(r.gDouble)}</td><td>${r.doubleDiff==null?'—':fmtM(r.doubleDiff)}</td><td><span class="badge ${r.status==='MATCH'?'b-ok':'b-bad'}">${r.status}</span></td><td>${escHtml(r.reason||'—')}</td></tr>`).join('')}</table></div>`;}
+  html+=`<div class="ready-box"><strong>Employer Tax Assignment Validation</strong><div class="small">${escHtml(GUSTO_STATE.taxAssignmentMessage||'NOT CHECKED')}</div></div>`;
+  if(GUSTO_STATE.calc?.sourceValidation?.length){html+=`<h2 style="margin-top:14px;">WC Source Validation</h2><div class="overflow"><table><tr><th>WC Code</th><th>Configured</th><th>WC Sheet</th><th>HZ & EL Sheet</th><th>Status</th></tr>${GUSTO_STATE.calc.sourceValidation.map(x=>`<tr class="${x.status==='OK'?'':'problem'}"><td>${x.code}</td><td>${x.configured??'NOT CONFIGURED'}</td><td>${x.wc??'N/A'}</td><td>${x.hz??'N/A'}</td><td>${escHtml(x.status)}</td></tr>`).join('')}</table></div>`;}
+  if(GUSTO_STATE.calc){const w=GUSTO_STATE.calc.wc.groups;html+=`<h2 style="margin-top:14px;">WC Calculation</h2><div class="overflow"><table><tr><th>Code</th><th>Regular Pay</th><th>OT</th><th>2/3 OT for WC</th><th>WC Basis</th><th>Configured Rate</th><th>WC</th></tr>${w.map(g=>`<tr><td>${g.code}</td><td>${fmtM(g.regular)}</td><td>${fmtM(g.overtime)}</td><td>${fmtM(g.otWcBasis)}</td><td>${fmtM(g.wcBasis)}</td><td>${g.rate==null?'MISSING':g.rate}</td><td>${g.wcAmount==null?'NEEDS REVIEW':fmtM(g.wcAmount)}</td></tr>`).join('')}</table></div>`;const specs=[...(GUSTO_STATE.calc.hzEl||[]),...(GUSTO_STATE.calc.paul||[])];if(specs.length)html+=`<h2 style="margin-top:14px;">Configured Special Calculations</h2><div class="overflow"><table><tr><th>Employee</th><th>Rule</th><th>WC Code</th><th>Wages</th><th>Employer Tax</th><th>WC Rate</th><th>WC</th><th>Fee %</th><th>Fee</th><th>Allocation %</th><th>Invoice Total</th></tr>${specs.map(x=>`<tr><td>${escHtml(x.name)}</td><td>${x.rule}</td><td>${x.wcCode}</td><td>${fmtM(x.wages)}</td><td>${x.employerTax==null?'BLOCKED':fmtM(x.employerTax)}</td><td>${x.wcRate==null?'MISSING':x.wcRate}</td><td>${x.wc==null?'NEEDS REVIEW':fmtM(x.wc)}</td><td>${x.feePct==null?'NEEDS REVIEW':x.feePct}</td><td>${x.fee==null?'NEEDS REVIEW':fmtM(x.fee)}</td><td>${x.allocationPct==null?'—':x.allocationPct}</td><td>${x.invoiceTotal==null?'NEEDS REVIEW':fmtM(x.invoiceTotal)}</td></tr>`).join('')}</table></div>`;}
+  box.innerHTML=html;document.getElementById('gustoMismatchDownload').disabled=!(c&&c.rows.some(r=>r.status!=='MATCH'));}
+function downloadGustoMismatchReport(){if(!GUSTO_STATE.comparison)return;const aoa=[['Prepared Employee','Gusto Employee','Prepared Regular','Gusto Regular','Regular Diff','Prepared OT','Gusto OT','OT Diff','Prepared Double','Gusto Double','Double Diff','Reason']];GUSTO_STATE.comparison.rows.filter(r=>r.status!=='MATCH').forEach(r=>aoa.push([r.employee,r.gustoName,r.pRegular??'',r.gRegular??'',r.regularDiff??'',r.pOT??'',r.gOT??'',r.otDiff??'',r.pDouble??'',r.gDouble??'',r.doubleDiff??'',r.reason]));const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(aoa),'Employee Exceptions');XLSX.writeFile(wb,'Blunted_Payroll_Reconciliation_Exceptions.xlsx');}
+function syncProductionButtons(){
+  const b=document.getElementById('finalDownloadBtn');
+  if(!b)return;
+  const ready=!!RESULT && PRE_APPROVAL.status==='APPROVED';
+  b.disabled=!ready;
+  b.title=ready?'Download payroll workbook':'Complete Step 3 approval first';
+  const h=document.getElementById('downloadHint');if(h)h.textContent=ready?(GUSTO_STATE.uploaded?'Ready to download.':'Approved. Upload the Gusto report in Step 4 to confirm wages before downloading (recommended).'):'The payroll workbook unlocks after approval (Step 3). The audit workbook adds review and Gusto reconciliation sheets.';
+}
+
+function updateOverallReadiness(){if(!RESULT){syncProductionButtons();return;}document.getElementById('processStatus').innerHTML='Processed '+RESULT.dataRows.length+' rows. Overall: <strong>'+escHtml(getFinalReadiness())+'</strong>';renderPrePayrollReview();syncProductionButtons();}
+
+/* ---------------- Core processing ---------------- */
+let RESULT = null;
+
+function process(){
+  if(!RAW_ROWS){ return; }
+  if(PRE_APPROVAL.status!=='NOT REVIEWED')PRE_APPROVAL={status:'NOT REVIEWED',preparedBy:'',reviewer:'',comments:'',timestamp:''};
+  if(GUSTO_STATE.uploaded){ GUSTO_STATE=makeEmptyGustoState(); document.getElementById('gustoFileStatus').textContent='T-Sheet reprocessed. Re-upload the post-payroll Gusto General Report.'; }
+  const rmap = rateMap();
+  const seen = new Set();
+  const review = [];
+  const configuredPeriodStart=toISODate(document.getElementById('payPeriodStart')?.value||'');
+  const configuredPeriodEnd=toISODate(document.getElementById('payPeriodEnd')?.value||'');
+  const payrollFrequency=document.getElementById('payrollFrequency')?.value||'Weekly';
+  const requiredPeriodDays=payrollFrequency==='Biweekly'?14:7;
+  const actualPeriodDays=inclusiveCalendarDays(configuredPeriodStart,configuredPeriodEnd);
+  if(!configuredPeriodStart||!configuredPeriodEnd){
+    review.push({sourceRow:'CONFIG',employee:'(all)',date:'',hours:'',jobcode_1:'',jobcode_2:'',reason:'Pay Period Start and Pay Period End are required. Payroll period cannot be inferred from the last worked date.',severity:'Blocking'});
+  } else if(configuredPeriodStart>configuredPeriodEnd){
+    review.push({sourceRow:'CONFIG',employee:'(all)',date:'',hours:'',jobcode_1:'',jobcode_2:'',reason:'Pay Period Start must be on or before Pay Period End.',severity:'Blocking'});
+  } else if(actualPeriodDays!==requiredPeriodDays){
+    review.push({sourceRow:'CONFIG',employee:'(all)',date:'',hours:'',jobcode_1:'',jobcode_2:'',reason:`${payrollFrequency} payroll requires exactly ${requiredPeriodDays} calendar days; selected period contains ${actualPeriodDays}.`,severity:'Blocking'});
+  }
+  const dataRows = [];
+  const dailyPaid = new Map();   // key emp||date -> {emp,date,hours}
+  const jobTotals = new Map();   // jobcode -> {rows,hours,pay}
+  const empDisplay = new Map();  // normalized -> display name
+  const rscEmployees = new Set();
+
+  let rawHoursSum=0, lunchHoursSum=0, paidHoursSum=0, missingRateEmp=new Set(), invalidHoursCount=0;
+
+  RAW_ROWS.forEach(r=>{
+    const fullname = (r.fname+' '+r.lname).trim().replace(/\s+/g,' ');
+    const empKey = employeeIdentityKey(r,fullname);
+    if(fullname) empDisplay.set(empKey, empDisplay.get(empKey) || fullname);
+
+    // Exact duplicate detection must ignore sourceRow; otherwise every row is automatically unique.
+    const dup = JSON.stringify({fname:r.fname,lname:r.lname,number:r.number,group:r.group,local_date:r.local_date,
+      local_day:r.local_day,local_start_time:r.local_start_time,local_end_time:r.local_end_time,tz:r.tz,
+      hours_raw:r.hours_raw,jobcode_1:r.jobcode_1,jobcode_2:r.jobcode_2,jobcode_3:r.jobcode_3,location:r.location});
+    let isDup=false;
+    if(seen.has(dup)){ isDup=true; } else { seen.add(dup); }
+
+    const dateISO = toISODate(r.local_date);
+    if(dateISO&&configuredPeriodStart&&configuredPeriodEnd&&(dateISO<configuredPeriodStart||dateISO>configuredPeriodEnd)){
+      review.push(mkReview(r,fullname,dateISO,r.hours_raw,'Timesheet row falls outside the selected pay period','Blocking'));
+    }
+    const hours = parseFloat(r.hours_raw);
+    const hoursValid = r.hours_raw!=='' && !isNaN(hours);
+    const codeNorm = normalizeCode(r.jobcode_1);
+
+    // ---- review checks ----
+    if(!r.fname || !r.lname) review.push(mkReview(r,fullname,dateISO,hours,'Missing employee first/last name','Blocking'));
+    if(!r.local_date) review.push(mkReview(r,fullname,dateISO,hours,'Missing local_date','Blocking'));
+    else if(!dateISO) review.push(mkReview(r,fullname,dateISO,hours,'Invalid date','Blocking'));
+    if(r.hours_raw===''||r.hours_raw==null) review.push(mkReview(r,fullname,dateISO,hours,'Missing hours','Blocking'));
+    else if(!hoursValid) review.push(mkReview(r,fullname,dateISO,hours,'Non-numeric hours','Blocking'));
+    if(hoursValid && hours<0) review.push(mkReview(r,fullname,dateISO,hours,'Negative hours','Warning'));
+    if(!r.jobcode_1) review.push(mkReview(r,fullname,dateISO,hours,'Missing jobcode_1','Blocking'));
+    if(!isValidTimestamp(r.local_start_time)) review.push(mkReview(r,fullname,dateISO,hours,'Invalid start timestamp','Warning'));
+    if(!isValidTimestamp(r.local_end_time)) review.push(mkReview(r,fullname,dateISO,hours,'Invalid end timestamp','Warning'));
+    if(isDup) review.push(mkReview(r,fullname,dateISO,hours,'Duplicate source row','Warning'));
+
+    const rateLookup=lookupRate(rmap,r,fullname);let payrate=rateLookup.rate;
+    if(fullname && payrate==null){
+      missingRateEmp.add(empKey);
+      const reason = rateLookup.duplicate ? 'Duplicate employee identity in rate master — rate is ambiguous' : 'Missing/invalid employee pay rate';
+      review.push(mkReview(r,fullname,dateISO,hours,reason,'Blocking'));
+    }
+
+    const totalPay = (hoursValid && payrate!=null) ? hours*payrate : null;
+
+    dataRows.push({employeeKey:empKey,payroll_id:r.payroll_id,username:r.username,fullname,fname:r.fname,lname:r.lname,number:r.number,group:r.group,local_date:r.local_date,
+      local_day:r.local_day,local_start_time:r.local_start_time,local_end_time:r.local_end_time,tz:r.tz,
+      hours:hoursValid?hours:r.hours_raw,jobcode_1:r.jobcode_1,jobcode_2:r.jobcode_2,jobcode_3:r.jobcode_3,
+      location:r.location,payrate,totalPay,dateISO});
+
+    if(hoursValid){
+      rawHoursSum+=hours;
+      if(codeNorm==='lunch break') lunchHoursSum+=hours; else paidHoursSum+=hours;
+    } else invalidHoursCount++;
+
+    if(codeNorm==='rsc' && fullname) rscEmployees.add(empKey);
+
+    // job code totals
+    const jkey = r.jobcode_1 || '(missing)';
+    if(!jobTotals.has(jkey)) jobTotals.set(jkey,{rows:0,hours:0,pay:0,payKnown:true});
+    const jt = jobTotals.get(jkey);
+    jt.rows++;
+    if(hoursValid) jt.hours+=hours;
+    if(totalPay!=null) jt.pay+=totalPay; else if(hoursValid) jt.payKnown=false;
+
+    // daily grouping (paid hours excl lunch), only for valid rows w/ date+hours
+    if(hoursValid && dateISO && fullname && codeNorm!=='lunch break'){
+      const dk = empKey+'||'+dateISO;
+      if(!dailyPaid.has(dk)) dailyPaid.set(dk,{empKey,fullname,dateISO,hours:0});
+      dailyPaid.get(dk).hours+=hours;
+    }
+  });
+
+  // Reference workbook separates employees with RSC hours into the RSC + Rest calculation.
+  // If a future RSC employee also has another paid production job code, the supplied reference does not define
+  // how those mixed hours should be allocated. Flag instead of silently losing/misclassifying them.
+  const rscAllowedCodes = new Set(['rsc','rest break','lunch break']);
+  RAW_ROWS.forEach(r=>{
+    const fullname=(r.fname+' '+r.lname).trim().replace(/\s+/g,' '), empKey=employeeIdentityKey(r,fullname);
+    const codeNorm=normalizeCode(r.jobcode_1);
+    const h=parseFloat(r.hours_raw);
+    if(rscEmployees.has(empKey) && Number.isFinite(h) && !rscAllowedCodes.has(codeNorm)){
+      review.push(mkReview(r,fullname,toISODate(r.local_date),h,'RSC employee has mixed non-RSC paid job code; reference workbook does not define this allocation','Blocking'));
+    }
+  });
+
+  // ONE source of truth for daily -> employee-period -> consolidated normal payroll.
+  // RSC employees are intentionally excluded from normal Reg/OT/Double calculation, preserving approved behavior.
+  const payroll = calculatePayroll(dataRows, rmap, rscEmployees);
+  const overtimeRows = payroll.dailyCalculation.map(d=>({fullname:d.employeeName,dateISO:d.date,hours:d.paidHours,reg:d.regularHours,ot:d.overtimeHours,dt:d.doubleHours}));
+  const regTot=payroll.consolidated.regularHours, otTot=payroll.consolidated.overtimeHours, dtTot=payroll.consolidated.doubleHours;
+  if(payroll.consolidated.doubleHours>GUSTO_TOLERANCE && getConfigNumber('doubleMultiplier')==null){
+    review.push({sourceRow:'CONFIG',employee:'(all)',date:'',hours:payroll.consolidated.doubleHours,jobcode_1:'',jobcode_2:'',reason:'Double Time hours exist but Double Time multiplier is not configured; Double Time pay requires review.',severity:'Blocking'});
+  }
+
+  payroll.validation.forEach(v=>review.push({sourceRow:'CALC',employee:v.employee||'(all)',date:v.date||'',hours:'',jobcode_1:'',jobcode_2:'',reason:v.reason,severity:'Blocking'}));
+
+  // RSC and REST
+  const rscRows = [];
+  let rscHtot=0, restHtot=0, rscPayTot=0, restPayTot=0;
+  [...rscEmployees].sort((a,b)=>a.localeCompare(b)).forEach(empKey=>{
+    const fullname = empDisplay.get(empKey);
+    let rscH=0, restH=0;
+    RAW_ROWS.forEach(r=>{
+      if(employeeIdentityKey(r,(r.fname+' '+r.lname).trim())!==empKey) return;
+      const h=parseFloat(r.hours_raw); if(isNaN(h)) return;
+      const c=normalizeCode(r.jobcode_1);
+      if(c==='rsc') rscH+=h; else if(c==='rest break') restH+=h;
+    });
+    const sample=RAW_ROWS.find(x=>employeeIdentityKey(x,(x.fname+' '+x.lname).trim())===empKey);const rate=sample?lookupRate(rmap,sample,fullname).rate:null;
+    const rscPay = rate!=null? rscH*rate : null;
+    const restPay = rate!=null? restH*rate : null;
+    rscHtot+=rscH; restHtot+=restH;
+    if(rscPay!=null) rscPayTot+=rscPay;
+    if(restPay!=null) restPayTot+=restPay;
+    rscRows.push({fullname,rscH,restH,total:rscH+restH,rscPay,restPay,totalPay:(rscPay!=null&&restPay!=null)?rscPay+restPay:null,rateMissing:rate==null});
+  });
+
+  const period = {start:configuredPeriodStart||null,end:configuredPeriodEnd||null,source:PAY_PERIOD_SOURCE||'manual',frequency:payrollFrequency,calendarDays:actualPeriodDays};
+  payroll.period=period;
+  const paidBasePay = dataRows.reduce((sum,r)=>normalizeCode(r.jobcode_1)==='lunch break'?sum:sum+(r.totalPay||0),0);
+
+  RESULT = {dataRows, review, jobTotals, overtimeRows, rscRows, rscEmployees, empDisplay, payroll,
+    stats:{
+      employees: empDisplay.size, sourceRows: RAW_ROWS.length,
+      rawHours: rawHoursSum, lunchHours: lunchHoursSum, paidHours: paidHoursSum,
+      standardPaidHours: payroll.consolidated.paidHours,
+      regularHours: regTot, overtimeHours: otTot, doubleHours: dtTot,
+      regularPay: payroll.consolidated.regularPay, overtimePay: payroll.consolidated.overtimePay,
+      doublePay: payroll.consolidated.doublePay, payrollWages: payroll.consolidated.totalWages,
+      totalPay: dataRows.reduce((s,r)=>s+(r.totalPay||0),0), paidBasePay,
+      missingRateCount: missingRateEmp.size, invalidHoursCount,
+      reviewCount: new Set(review.map(r=>String(r.sourceRow)+'|'+r.reason)).size,
+      rscHours: rscHtot, restHours: restHtot, rscPay: rscPayTot, restPay: restPayTot,
+      period
+    }
+  };
+
+  document.getElementById('processStatus').textContent = 'Processed '+RAW_ROWS.length+' rows.';
+  document.getElementById('afterProcess').style.display='block';
+    renderResults();
+}
+function mkReview(r,fullname,dateISO,hours,reason,severity){
+  return {sourceRow:r.sourceRow, employee:fullname||'(blank)', date: r.local_date||'(blank)', hours: r.hours_raw===''? '(blank)':r.hours_raw,
+    jobcode_1: r.jobcode_1||'(blank)', jobcode_2:r.jobcode_2||'', reason, severity};
+}
+
+/* ---------------- Rendering ---------------- */
+function renderResults(){
+  const s = RESULT.stats;
+  document.getElementById('statGrid').innerHTML = [
+    ['Employees',s.employees],['Source Rows',s.sourceRows],['Paid Hours',fmtH(s.paidHours)],
+    ['Regular Hours',fmtH(s.regularHours)],['Overtime Hours',fmtH(s.overtimeHours)],['Double Time',fmtH(s.doubleHours)],
+    ['Lunch Hours',fmtH(s.lunchHours)],['Review Count',s.reviewCount]
+  ].map(([l,n])=>`<div class="stat"><div class="n">${n}</div><div class="l">${l}</div></div>`).join('');
+
+  renderRecon();
+  renderPrePayrollReview();
+  renderGustoCheckpoint();
+  buildTabs();
+  renderIssueBanner();
+}
+
+function renderRecon(){updateOverallReadiness();}
+function renderIssueBanner(){
+  const el=document.getElementById('issueBanner'); if(!el||!RESULT)return;
+  const bl=RESULT.review.filter(r=>r.severity==='Blocking'), wr=RESULT.review.filter(r=>r.severity!=='Blocking');
+  const n=x=>new Set(x.map(r=>r.sourceRow+'|'+r.reason)).size;
+  if(bl.length) el.innerHTML=`<div class="issue-bad" onclick="setTab('Review')"><strong>${n(bl)} blocking issue(s)</strong> must be fixed before approval. Click to view the Review tab.${wr.length?' Plus '+n(wr)+' warning(s).':''}</div>`;
+  else if(wr.length) el.innerHTML=`<div class="issue-bad" style="background:var(--warn-bg);color:var(--warn);" onclick="setTab('Review')"><strong>${n(wr)} warning(s)</strong> to check before approving. Click to view the Review tab.</div>`;
+  else el.innerHTML='<div class="issue-ok">&#10003; No issues found.</div>';
+}
+
+const TABS = ['Summary','Employee Payroll','Daily Calculation','Data','Overtime Calculation','RSC + Rest','Job Codes','Hourly Rates','Review','Post-Payroll Reconciliation'];
+let activeTab='Summary';
+function buildTabs(){
+  document.getElementById('tabBar').innerHTML = TABS.map(t=>`<div class="tab ${t===activeTab?'active':''}" onclick="setTab('${t}')">${t}</div>`).join('');
+  renderTab();
+}
+function setTab(t){ activeTab=t; buildTabs(); }
+function renderTab(){
+  const c=document.getElementById('tabContent'); const s=RESULT.stats;
+  if(activeTab==='Summary'){
+    c.innerHTML = summaryHTML(s);
+  } else if(activeTab==='Employee Payroll'){
+    const p=RESULT.payroll.period;
+    const periodLabel=(p.start||'—')+' to '+(p.end||'—');
+    const cards=RESULT.payroll.standardEmployees.map(e=>{
+      const t=e.totals;
+      const daily=e.daily.map(d=>`<tr><td>${escHtml(d.date)}</td><td>${fmtH(d.paidHours)}</td><td>${fmtH(d.regularHours)}</td><td>${fmtH(d.overtimeHours)}</td><td>${fmtH(d.doubleHours)}</td></tr>`).join('');
+      return `<details class="employee-card"><summary>${escHtml(e.employeeName)} — Paid ${fmtH(t.paidHours)} | Reg ${fmtH(t.regularHours)} | OT ${fmtH(t.overtimeHours)} | Double ${fmtH(t.doubleHours)} | Total ${fmtM(t.totalWages)}</summary><div class="employee-body"><div class="overflow"><table><tr><th>Employee</th><th>Period</th><th>Paid Hours</th><th>Regular Hours</th><th>OT Hours</th><th>Double Hours</th><th>Rate</th><th>Regular Pay</th><th>OT Pay</th><th>Double Pay</th><th>Total Wages</th></tr><tr><td>${escHtml(e.employeeName)}</td><td>${periodLabel}</td><td>${fmtH(t.paidHours)}</td><td>${fmtH(t.regularHours)}</td><td>${fmtH(t.overtimeHours)}</td><td>${fmtH(t.doubleHours)}</td><td>${e.rate==null?'MISSING':fmtM(e.rate)}</td><td>${fmtM(t.regularPay)}</td><td>${fmtM(t.overtimePay)}</td><td>${fmtM(t.doublePay)}</td><td>${fmtM(t.totalWages)}</td></tr></table></div><div class="small" style="margin:10px 0 4px;">Daily audit</div><div class="overflow" style="max-height:260px;"><table><tr><th>Date</th><th>Paid</th><th>Reg</th><th>OT</th><th>Double</th></tr>${daily}<tr class="tot-row"><td>Period total</td><td>${fmtH(t.paidHours)}</td><td>${fmtH(t.regularHours)}</td><td>${fmtH(t.overtimeHours)}</td><td>${fmtH(t.doubleHours)}</td></tr></table></div></div></details>`;
+    }).join('');
+    const rscNote=RESULT.payroll.employees.some(e=>e.isRSC)?'<div class="note">RSC employees are intentionally excluded from normal Regular/OT/Double payroll and remain in the approved RSC + Rest tab.</div>':'';
+    c.innerHTML=rscNote+(cards||'<p class="small">No standard payroll employees available.</p>');
+  } else if(activeTab==='Daily Calculation'){
+    const rows=RESULT.payroll.dailyCalculation.map(d=>`<tr><td>${escHtml(d.employeeName)}</td><td>${escHtml(d.date)}</td><td>${fmtH(d.rawHours)}</td><td>${fmtH(d.lunchHours)}</td><td>${fmtH(d.paidHours)}</td><td>${fmtH(d.regularHours)}</td><td>${fmtH(d.overtimeHours)}</td><td>${fmtH(d.doubleHours)}</td></tr>`).join('');
+    c.innerHTML=`<div class="small" style="margin-bottom:8px;">Daily calculation is authoritative: Lunch Break excluded, Rest Break included. RSC employees remain in the RSC + Rest logic.</div><div class="overflow"><table><tr><th>Employee</th><th>Date</th><th>Raw Hours</th><th>Lunch Break</th><th>Paid Hours</th><th>Regular</th><th>Overtime</th><th>Double</th></tr>${rows}</table></div>`;
+  } else if(activeTab==='Data'){
+    let rows = RESULT.dataRows.map(r=>`<tr class="${normalizeCode(r.jobcode_1)==='lunch break'?'excl':''}"><td>${escHtml(r.fullname)}</td><td>${r.dateISO||r.local_date}</td><td>${escHtml(r.local_day)}</td><td>${typeof r.hours==='number'?fmtH(r.hours):r.hours}</td><td>${escHtml(r.jobcode_1)}</td><td>${escHtml(r.jobcode_2)}</td><td>${escHtml(r.location)}</td><td>${r.payrate==null?'MISSING':r.payrate.toFixed(2)}</td><td>${fmtM(r.totalPay)}</td></tr>`).join('');
+    c.innerHTML = `<div class="overflow"><table><tr><th>Full Name</th><th>Date</th><th>Day</th><th>Hours</th><th>Jobcode 1</th><th>Jobcode 2</th><th>Location</th><th>Rate</th><th>Total Pay</th></tr>${rows}</table></div>`;
+  } else if(activeTab==='Overtime Calculation'){
+    let rows = RESULT.overtimeRows.map(r=>`<tr><td>${escHtml(r.fullname)}</td><td>${escHtml(r.dateISO)}</td><td>${fmtH(r.hours)}</td><td>${fmtH(r.reg)}</td><td>${fmtH(r.ot)}</td><td>${fmtH(r.dt)}</td></tr>`).join('');
+    c.innerHTML = `<div class="small" style="margin-bottom:8px;">Excludes RSC employees (see RSC + Rest tab) and Lunch Break hours.</div><div class="overflow"><table><tr><th>Employee</th><th>Date</th><th>Total Paid Hours</th><th>Regular</th><th>Overtime</th><th>Double</th></tr>${rows}<tr class="tot-row"><td colspan="3">Total</td><td>${fmtH(s.regularHours)}</td><td>${fmtH(s.overtimeHours)}</td><td>${fmtH(s.doubleHours)}</td></tr></table></div>`;
+  } else if(activeTab==='RSC + Rest'){
+    let rows = RESULT.rscRows.map(r=>`<tr><td>${escHtml(r.fullname)}</td><td>${fmtH(r.rscH)}</td><td>${fmtH(r.restH)}</td><td>${fmtH(r.total)}</td><td>${fmtM(r.rscPay)}</td><td>${fmtM(r.restPay)}</td><td>${fmtM(r.totalPay)}${r.rateMissing?' <span class="badge b-bad">NO RATE</span>':''}</td></tr>`).join('');
+    c.innerHTML = `<div class="overflow"><table><tr><th>Name</th><th>RSC Hours</th><th>Rest Break Hours</th><th>Total Hours</th><th>RSC Pay</th><th>Rest Break Pay</th><th>Total Pay</th></tr>${rows}<tr class="tot-row"><td>Grand Total</td><td>${fmtH(s.rscHours)}</td><td>${fmtH(s.restHours)}</td><td>${fmtH(s.rscHours+s.restHours)}</td><td>${fmtM(s.rscPay)}</td><td>${fmtM(s.restPay)}</td><td>${fmtM(s.rscPay+s.restPay)}</td></tr></table></div>`;
+  } else if(activeTab==='Job Codes'){
+    let rows=[...RESULT.jobTotals.entries()].sort((a,b)=>b[1].hours-a[1].hours).map(([code,j])=>`<tr class="${normalizeCode(code)==='lunch break'?'excl':''}"><td>${escHtml(code)}</td><td>${j.rows}</td><td>${fmtH(j.hours)}</td><td>${j.payKnown?fmtM(j.pay):'partial — missing rate(s)'}</td><td>${normalizeCode(code)==='lunch break'?'<span class="badge b-warn">EXCLUDED</span>':''}</td></tr>`).join('');
+    c.innerHTML = `<div class="overflow"><table><tr><th>Job Code</th><th>Row Count</th><th>Total Hours</th><th>Total Pay</th><th></th></tr>${rows}</table></div>`;
+  } else if(activeTab==='Hourly Rates'){
+    let rows = rateRows.map(r=>`<tr><td>${escHtml(r.name)}</td><td>${Number.isFinite(+r.rate)?(+r.rate).toFixed(2):''}</td><td>${r.notes||''}</td></tr>`).join('');
+    c.innerHTML = `<div class="overflow"><table><tr><th>Full Name</th><th>Pay Rate</th><th>Notes</th></tr>${rows}</table></div>`;
+  } else if(activeTab==='Review'){
+    if(!RESULT.review.length){ c.innerHTML='<p class="small">No rows require review.</p>'; return; }
+    let rows = RESULT.review.map(r=>`<tr class="problem"><td>${r.sourceRow}</td><td>${escHtml(r.employee)}</td><td>${escHtml(r.date)}</td><td>${escHtml(r.hours)}</td><td>${escHtml(r.jobcode_1)}</td><td>${escHtml(r.jobcode_2)}</td><td>${escHtml(r.reason)}</td><td><span class="badge ${r.severity==='Blocking'?'b-bad':'b-warn'}">${r.severity}</span></td></tr>`).join('');
+    c.innerHTML = `<div class="overflow"><table><tr><th>Row</th><th>Employee</th><th>Date</th><th>Hours</th><th>Jobcode 1</th><th>Jobcode 2</th><th>Reason</th><th>Severity</th></tr>${rows}</table></div>`;
+    } else if(activeTab==='Post-Payroll Reconciliation'){
+    if(!GUSTO_STATE.uploaded){c.innerHTML='<div class="ready-box"><strong>NOT UPLOADED</strong><div class="small">Approve the payroll in Step 3, then upload the Gusto General Report in Step 4.</div></div>';}
+    else {const cmp=GUSTO_STATE.comparison;let html=`<div class="ready-box"><strong>${escHtml(getFinalReadiness())}</strong><div class="small">Employee matching is exact or uses the explicit Alias Master. No fuzzy matching.</div></div>`;if(cmp)html+=`<div class="overflow"><table><tr><th>Prepared Employee</th><th>Gusto Employee</th><th>Prepared Regular</th><th>Gusto Regular</th><th>Diff</th><th>Prepared OT</th><th>Gusto OT</th><th>Diff</th><th>Status</th><th>Reason</th></tr>${cmp.rows.map(r=>`<tr class="${r.status==='MATCH'?'':'problem'}"><td>${escHtml(r.employee)}</td><td>${escHtml(r.gustoName)}</td><td>${r.pRegular==null?'—':fmtM(r.pRegular)}</td><td>${r.gRegular==null?'—':fmtM(r.gRegular)}</td><td>${r.regularDiff==null?'—':fmtM(r.regularDiff)}</td><td>${r.pOT==null?'—':fmtM(r.pOT)}</td><td>${r.gOT==null?'—':fmtM(r.gOT)}</td><td>${r.otDiff==null?'—':fmtM(r.otDiff)}</td><td>${r.status}</td><td>${escHtml(r.reason||'—')}</td></tr>`).join('')}</table></div>`;c.innerHTML=html;}
+
+
+  }
+}
+function summaryHTML(s){
+  const checks=[
+    ['Payroll frequency', s.period.frequency||'—'],['Reporting period', (s.period.start||'—')+' to '+(s.period.end||'—')],
+    ['Source rows', s.sourceRows],['Employee count', s.employees],
+    ['Raw hours', fmtH(s.rawHours)],['Lunch break hours', fmtH(s.lunchHours)],['QBO/reconciliation paid hours (all non-lunch)', fmtH(s.paidHours)],['Standard payroll paid hours (excludes RSC employees)', fmtH(s.standardPaidHours)],
+    ['Regular hours', fmtH(s.regularHours)],['Overtime hours', fmtH(s.overtimeHours)],['Double time hours', fmtH(s.doubleHours)],
+    ['Regular pay', fmtM(s.regularPay)],['Overtime pay', fmtM(s.overtimePay)],['Double-time pay', fmtM(s.doublePay)],['Standard payroll wages', fmtM(s.payrollWages)],
+    ['Data-sheet line pay (all rows incl. Lunch)', fmtM(s.totalPay)],['Paid-base line pay (Lunch excluded)', fmtM(s.paidBasePay)],
+    ['Missing rate count (employees)', s.missingRateCount],['Invalid hours count', s.invalidHoursCount],['Review count', s.reviewCount],
+    ['Post-payroll Gusto General Report', GUSTO_STATE.status||'NOT CHECKED'],['Final payroll readiness', getFinalReadiness()],
+    ['RSC hours (all RSC employees)', fmtH(s.rscHours)],['Rest break hours (RSC employees)', fmtH(s.restHours)]
+  ];
+  return '<ul class="checklist">'+checks.map(([l,v])=>`<li><span class="small" style="min-width:260px;display:inline-block;">${l}</span><strong>${v}</strong></li>`).join('')+'</ul>';
+}
+
+/* ---------------- Excel export ---------------- */
+function buildSOPJobRows(){
+  const groups=new Map();
+  RESULT.dataRows.forEach(r=>{
+    if(normalizeCode(r.jobcode_1)==='lunch break')return;
+    const c1=String(r.jobcode_1||'').trim(),c2=String(r.jobcode_2||'').trim(),k=c1+'||'+c2;
+    if(!groups.has(k))groups.set(k,{job1:c1,job2:c2,hours:0,pay:0,payKnown:true});
+    const g=groups.get(k),h=Number(r.hours);if(Number.isFinite(h))g.hours+=h;
+    if(r.totalPay==null&&Number.isFinite(h))g.payKnown=false;else g.pay+=Number(r.totalPay)||0;
+  });
+  return [...groups.values()].sort((a,b)=>a.job1.localeCompare(b.job1)||a.job2.localeCompare(b.job2));
+}
+function sopQboLabel(){return '';}
+
+function cellStyle(fill='FFFFFF',fontColor='1C231F',bold=false,align='left'){
+  return {
+    fill:{fgColor:{rgb:fill}},
+    font:{name:'Calibri',sz:11,color:{rgb:fontColor},bold:bold},
+    alignment:{horizontal:align,vertical:'center'},
+    border:{
+      top:{style:'thin',color:{rgb:'D9E1D9'}},
+      bottom:{style:'thin',color:{rgb:'D9E1D9'}},
+      left:{style:'thin',color:{rgb:'D9E1D9'}},
+      right:{style:'thin',color:{rgb:'D9E1D9'}}
+    }
+  };
+}
+function styleRange(ws,range,style){
+  const r=XLSX.utils.decode_range(range);
+  for(let R=r.s.r;R<=r.e.r;R++)for(let C=r.s.c;C<=r.e.c;C++){
+    const a=XLSX.utils.encode_cell({r:R,c:C});
+    if(!ws[a])ws[a]={t:'s',v:''};
+    ws[a].s=JSON.parse(JSON.stringify(style));
+  }
+}
+function styleRow(ws,row1,startCol,endCol,style){
+  styleRange(ws,`${startCol}${row1}:${endCol}${row1}`,style);
+}
+function styleSOPSummary(ws,sumAOA,standardCount,rscCount,jobCount){
+  const dark=cellStyle('2F5D4C','FFFFFF',true,'center');
+  const light=cellStyle('D9EAD3','1C231F',true,'center');
+  const header=cellStyle('EAF4E6','1C231F',true,'left');
+  const total=cellStyle('E7E6E6','1C231F',true,'left');
+  const note=cellStyle('FFF2CC','9C5700',false,'left');
+  const warn=cellStyle('FCE8B2','7F6000',true,'left');
+  const body=cellStyle('FFFFFF','1C231F',false,'left');
+
+  styleRange(ws,'B1:D1',dark);styleRange(ws,'F1:J1',dark);styleRange(ws,'L1:O1',dark);
+  styleRange(ws,'B3:D3',header);styleRange(ws,'F3:J3',header);styleRange(ws,'L3:O3',header);
+  styleRange(ws,'B18:F18',dark);styleRange(ws,'B19:F19',header);
+  styleRange(ws,'B29:C29',dark);
+  styleRange(ws,'B30:C33',body);styleRange(ws,'B35:C35',warn);
+  styleRange(ws,'B16:O16',note);
+
+  const stdTotal=4+standardCount, rscTotal=4+rscCount, jobTotal=4+jobCount, otTotal=20+standardCount;
+  styleRow(ws,stdTotal,'B','D',total);
+  styleRow(ws,rscTotal,'F','J',total);
+  styleRow(ws,jobTotal,'L','O',total);
+  styleRow(ws,otTotal,'B','F',total);
+
+  ws['!freeze']={xSplit:1,ySplit:2,topLeftCell:'B3',activePane:'bottomRight',state:'frozen'};
+}
+function styleDataSheet(ws,lastRow){
+  const header=cellStyle('2F5D4C','FFFFFF',true,'center');
+  styleRange(ws,'A1:Q1',header);
+  ws['!freeze']={xSplit:0,ySplit:1,topLeftCell:'A2',activePane:'bottomLeft',state:'frozen'};
+  for(let r=2;r<=lastRow;r++){
+    const jc=ws[`L${r}`];
+    if(jc&&normalizeCode(jc.v)==='lunch break')styleRange(ws,`A${r}:Q${r}`,cellStyle('FFF2CC','7F6000',false,'left'));
+  }
+}
+function styleSimpleTable(ws,lastRow,lastCol){
+  styleRange(ws,`A1:${lastCol}1`,cellStyle('2F5D4C','FFFFFF',true,'center'));
+  if(lastRow>=2&&ws[`A${lastRow}`]&&String(ws[`A${lastRow}`].v||'').trim().toLowerCase()==='grand total')styleRow(ws,lastRow,'A',lastCol,cellStyle('E7E6E6','1C231F',true,'left'));
+  ws['!freeze']={xSplit:0,ySplit:1,topLeftCell:'A2',activePane:'bottomLeft',state:'frozen'};
+}
+function styleRatesSheet(ws,lastRow){
+  styleRange(ws,'B2:D2',cellStyle('2F5D4C','FFFFFF',true,'center'));
+  if(lastRow>=4)styleRange(ws,`B4:D${lastRow}`,cellStyle('FFFFFF','1C231F',false,'left'));
+  ws['!freeze']={xSplit:1,ySplit:2,topLeftCell:'B3',activePane:'bottomRight',state:'frozen'};
+}
+
+function setNumFmt(ws,range,fmt='0.00'){const r=XLSX.utils.decode_range(range);for(let R=r.s.r;R<=r.e.r;R++)for(let C=r.s.c;C<=r.e.c;C++){const a=XLSX.utils.encode_cell({r:R,c:C});if(ws[a]&&typeof ws[a].v==='number')ws[a].z=fmt;}}
+function downloadWorkbook(){
+  if(!RESULT)return;
+  if(PRE_APPROVAL.status!=='APPROVED'){alert('Approve the payroll in Step 3 first.');return;}
+  if(!GUSTO_STATE.uploaded&&!confirm('The Gusto report has not been uploaded, so wages are not confirmed. Download anyway?'))return;
+  if(GUSTO_STATE.uploaded&&GUSTO_STATE.comparison&&!GUSTO_STATE.comparison.passed&&!confirm('Gusto wages do NOT match the prepared payroll. Download anyway?'))return;
+  const s=RESULT.stats,wb=XLSX.utils.book_new();
+  const standard=RESULT.payroll.standardEmployees;
+  const maxSummaryRows=Math.max(standard.length,RESULT.rscRows.length,buildSOPJobRows().length);
+  const sumAOA=Array.from({length:40},()=>Array(15).fill(''));
+  sumAOA[0][1]='Gusto Hours';sumAOA[0][5]='RSC Hours';sumAOA[0][11]='RSC/OF by Job';
+  ['Employee','Hours','Total Pay'].forEach((v,i)=>sumAOA[2][1+i]=v);
+  ['Employee','RSC Hours','Rest Break','Total Hours','Total Pay'].forEach((v,i)=>sumAOA[2][5+i]=v);
+  ['Jobcode 1','Jobcode 2','Hours','Total Pay'].forEach((v,i)=>sumAOA[2][11+i]=v);
+  standard.forEach((e,i)=>{const r=3+i,t=e.totals;const linePay=RESULT.dataRows.filter(x=>x.employeeKey===e.employeeKey&&normalizeCode(x.jobcode_1)!=='lunch break').reduce((a,x)=>a+(x.totalPay==null?0:Number(x.totalPay)||0),0);const linePayKnown=!RESULT.dataRows.some(x=>x.employeeKey===e.employeeKey&&normalizeCode(x.jobcode_1)!=='lunch break'&&x.totalPay==null);sumAOA[r][1]=e.employeeName;sumAOA[r][2]=round2(t.paidHours);sumAOA[r][3]=linePayKnown?round2(linePay):'Needs Review';});
+  let r=3+standard.length;const standardLinePay=RESULT.dataRows.filter(x=>!RESULT.rscEmployees.has(x.employeeKey)&&normalizeCode(x.jobcode_1)!=='lunch break').reduce((a,x)=>a+(x.totalPay==null?0:Number(x.totalPay)||0),0);sumAOA[r][1]='Grand Total';sumAOA[r][2]=round2(s.standardPaidHours);sumAOA[r][3]=round2(standardLinePay);
+  RESULT.rscRows.forEach((x,i)=>{const rr=3+i;sumAOA[rr][5]=x.fullname;sumAOA[rr][6]=round2(x.rscH);sumAOA[rr][7]=round2(x.restH);sumAOA[rr][8]=round2(x.total);sumAOA[rr][9]=x.totalPay==null?'Needs Review':round2(x.totalPay);});
+  r=3+RESULT.rscRows.length;sumAOA[r][5]='Grand Total';sumAOA[r][6]=round2(s.rscHours);sumAOA[r][7]=round2(s.restHours);sumAOA[r][8]=round2(s.rscHours+s.restHours);sumAOA[r][9]=round2(s.rscPay+s.restPay);
+  const jobs=buildSOPJobRows();jobs.forEach((x,i)=>{const rr=3+i;sumAOA[rr][11]=x.job1;sumAOA[rr][12]=x.job2;sumAOA[rr][13]=round2(x.hours);sumAOA[rr][14]=x.payKnown?round2(x.pay):'Needs Review';});
+  r=3+jobs.length;sumAOA[r][11]='Grand Total';sumAOA[r][13]=round2(s.paidHours);sumAOA[r][14]=round2(s.paidBasePay);
+  sumAOA[15][1]='*The Rest break hours are added to checks as advised by the client.';
+  sumAOA[17][1]='Overtime hours';['Employee','Total Paid Hours','Regular Hours','Overtime Hours','Double-Time Hours'].forEach((v,i)=>sumAOA[18][1+i]=v);
+  standard.forEach((e,i)=>{const rr=19+i,t=e.totals;sumAOA[rr][1]=e.employeeName;sumAOA[rr][2]=round2(t.paidHours);sumAOA[rr][3]=round2(t.regularHours);sumAOA[rr][4]=round2(t.overtimeHours);sumAOA[rr][5]=round2(t.doubleHours);});
+  r=19+standard.length;sumAOA[r][1]='Grand Total';sumAOA[r][2]=round2(s.standardPaidHours);sumAOA[r][3]=round2(s.regularHours);sumAOA[r][4]=round2(s.overtimeHours);sumAOA[r][5]=round2(s.doubleHours);
+  sumAOA[28][1]='Hours Control';sumAOA[29][1]='Source timesheet hours';sumAOA[29][2]=round2(s.rawHours);sumAOA[30][1]='Less: Lunch break';sumAOA[30][2]=round2(s.lunchHours);sumAOA[31][1]='Paid hours';sumAOA[31][2]=round2(s.paidHours);
+  const wsSum=XLSX.utils.aoa_to_sheet(sumAOA);wsSum['!cols']=[{wch:3},{wch:28},{wch:16},{wch:16},{wch:3},{wch:24},{wch:14},{wch:14},{wch:14},{wch:16},{wch:3},{wch:22},{wch:34},{wch:14},{wch:16}];wsSum['!merges']=[XLSX.utils.decode_range('B1:D1'),XLSX.utils.decode_range('F1:J1'),XLSX.utils.decode_range('L1:O1'),XLSX.utils.decode_range('B18:F18')];setNumFmt(wsSum,'C4:O40');styleSOPSummary(wsSum,sumAOA,standard.length,RESULT.rscRows.length,jobs.length);XLSX.utils.book_append_sheet(wb,wsSum,'Summary');
+
+  const dataAOA=[['fullname','fname','lname','number','group','local_date','local_day','local_start_time','local_end_time','tz','hours','jobcode_1','jobcode_2','jobcode_3','location','payrate','total pay']];
+  RESULT.dataRows.forEach(x=>dataAOA.push([x.fullname,x.fname,x.lname,x.number,x.group,x.dateISO||x.local_date,x.local_day,String(x.local_start_time),String(x.local_end_time),x.tz,Number.isFinite(Number(x.hours))?round2(Number(x.hours)):x.hours,x.jobcode_1,x.jobcode_2,x.jobcode_3,x.location,x.payrate==null?'Needs Review':round2(x.payrate),x.totalPay==null?'Needs Review':round2(x.totalPay)]));
+  const wsData=XLSX.utils.aoa_to_sheet(dataAOA);wsData['!cols']=[{wch:24},{wch:13},{wch:15},{wch:10},{wch:12},{wch:13},{wch:10},{wch:20},{wch:20},{wch:9},{wch:10},{wch:20},{wch:34},{wch:28},{wch:18},{wch:12},{wch:14}];wsData['!autofilter']={ref:'A1:Q'+dataAOA.length};setNumFmt(wsData,'K2:Q'+dataAOA.length);styleDataSheet(wsData,dataAOA.length);XLSX.utils.book_append_sheet(wb,wsData,'Data');
+
+  const otAOA=[['fname','local_date','Sum of hours','Regular Hours','Overtime Hours','Double Hours']];RESULT.overtimeRows.forEach(x=>otAOA.push([x.fullname,x.dateISO,round2(x.hours),round2(x.reg),round2(x.ot),round2(x.dt)]));
+  const wsOT=XLSX.utils.aoa_to_sheet(otAOA);wsOT['!cols']=[{wch:24},{wch:14},{wch:14},{wch:14},{wch:16},{wch:14}];setNumFmt(wsOT,'C2:F'+otAOA.length);styleSimpleTable(wsOT,otAOA.length,'F');XLSX.utils.book_append_sheet(wb,wsOT,'Overtime Calculation');
+
+  const rscAOA=[['Name','RSC hour','Rest Break Hours','Total Hours','RSC Pay','Rest Break Pay','Total Pay']];RESULT.rscRows.forEach(x=>rscAOA.push([x.fullname,round2(x.rscH),round2(x.restH),round2(x.total),x.rscPay==null?'Needs Review':round2(x.rscPay),x.restPay==null?'Needs Review':round2(x.restPay),x.totalPay==null?'Needs Review':round2(x.totalPay)]));rscAOA.push(['Grand Total',round2(s.rscHours),round2(s.restHours),round2(s.rscHours+s.restHours),round2(s.rscPay),round2(s.restPay),round2(s.rscPay+s.restPay)]);
+  const wsRSC=XLSX.utils.aoa_to_sheet(rscAOA);wsRSC['!cols']=[{wch:24},...Array(6).fill({wch:16})];setNumFmt(wsRSC,'B2:G'+rscAOA.length);styleSimpleTable(wsRSC,rscAOA.length,'G');XLSX.utils.book_append_sheet(wb,wsRSC,'RSC and REST');
+
+  const ratesAOA=[['','','',''],['','Full Name','Pay Rate','Notes'],['','','','']];rateRows.forEach(x=>ratesAOA.push(['',x.name,Number.isFinite(Number(x.rate))?round2(Number(x.rate)):'',x.notes||'']));const wsRates=XLSX.utils.aoa_to_sheet(ratesAOA);wsRates['!cols']=[{wch:3},{wch:30},{wch:14},{wch:42}];setNumFmt(wsRates,'C4:C'+ratesAOA.length);styleRatesSheet(wsRates,ratesAOA.length);XLSX.utils.book_append_sheet(wb,wsRates,'Hourly Rates');
+
+  const suffix=(s.period.start||'export')+'_to_'+(s.period.end||'export');
+  XLSX.writeFile(wb,'Payroll_Timesheet_FINAL_'+suffix+'.xlsx');
+}
+function downloadAuditWorkbook(){
+  if(!RESULT) return;
+  const s = RESULT.stats;
+  const wb = XLSX.utils.book_new();
+
+  const sumAOA = [
+    ['Blunted Payroll Timesheet'],
+    ['Payroll Frequency', s.period.frequency||''],['Reporting Period', (s.period.start||'')+' to '+(s.period.end||'')],
+    [],
+    ['Metric','Value'],
+    ['Source Rows', s.sourceRows],['Employee Count', s.employees],
+    ['Raw Hours', round2(s.rawHours)],['Lunch Break Hours', round2(s.lunchHours)],['QBO/Reconciliation Paid Hours', round2(s.paidHours)],['Standard Payroll Paid Hours', round2(s.standardPaidHours)],
+    ['Regular Hours', round2(s.regularHours)],['Overtime Hours', round2(s.overtimeHours)],['Double Time Hours', round2(s.doubleHours)],
+    ['Regular Pay',round2(s.regularPay)],['Overtime Pay',round2(s.overtimePay)],['Double Pay',round2(s.doublePay)],['Standard Payroll Wages',round2(s.payrollWages)],
+    ['Data-sheet Line Pay (all rows incl. Lunch)', round2(s.totalPay)],['Paid-base Line Pay (Lunch excluded)', round2(s.paidBasePay)],
+    ['Missing Rate Count', s.missingRateCount],['Invalid Hours Count', s.invalidHoursCount],['Review Count', s.reviewCount],
+    ['Pre-Payroll Review', PRE_APPROVAL.status],['Post-Payroll Gusto Reconciliation', GUSTO_STATE.status||'NOT CHECKED'],['Final Payroll Status', getFinalReadiness()],
+    ['RSC Hours', round2(s.rscHours)],['Rest Break Hours (RSC employees)', round2(s.restHours)],
+    [],['QBO Reconciliation',''],
+    ['Calculated Paid Hours', round2(s.paidHours)],
+  ];
+  const wsSum = XLSX.utils.aoa_to_sheet(sumAOA); wsSum['!cols']=[{wch:32},{wch:20}];
+  XLSX.utils.book_append_sheet(wb,wsSum,'Summary');
+
+  const dataAOA=[['employee_identity','payroll_id','username','fullname','fname','lname','number','group','local_date','local_day','local_start_time','local_end_time','tz','hours','jobcode_1','jobcode_2','jobcode_3','location','payrate','total pay']];
+  RESULT.dataRows.forEach(r=>dataAOA.push([r.employeeKey,r.payroll_id,r.username,r.fullname,r.fname,r.lname,r.number,r.group,r.dateISO||r.local_date,r.local_day,String(r.local_start_time),String(r.local_end_time),r.tz,r.hours,r.jobcode_1,r.jobcode_2,r.jobcode_3,r.location,r.payrate==null?'MISSING':round2(r.payrate),r.totalPay==null?'':round2(r.totalPay)]));
+  const wsData=XLSX.utils.aoa_to_sheet(dataAOA); wsData['!cols']=Array(20).fill({wch:14}); wsData['!autofilter']={ref:'A1:T1'};
+  XLSX.utils.book_append_sheet(wb,wsData,'Data');
+
+  const biAOA=[['Employee','Paid Hours','Regular Hours','Overtime Hours','Double Hours','Rate','Regular Pay','Overtime Pay','Double Pay','Total Wages']];
+  RESULT.payroll.standardEmployees.forEach(e=>{const t=e.totals;biAOA.push([e.employeeName,round2(t.paidHours),round2(t.regularHours),round2(t.overtimeHours),round2(t.doubleHours),e.rate==null?'MISSING':round2(e.rate),t.regularPay==null?'MISSING RATE':round2(t.regularPay),t.overtimePay==null?'MISSING RATE':round2(t.overtimePay),t.doublePay==null?'MISSING RATE':round2(t.doublePay),t.totalWages==null?'MISSING RATE':round2(t.totalWages)]);});
+  const wsBi=XLSX.utils.aoa_to_sheet(biAOA); wsBi['!cols']=[{wch:24},...Array(9).fill({wch:16})]; wsBi['!autofilter']={ref:'A1:J1'};
+  XLSX.utils.book_append_sheet(wb,wsBi,'Employee Payroll');
+
+  const dailyAOA=[['Employee','Date','Raw Hours','Lunch Break','Paid Hours','Regular','Overtime','Double']];
+  RESULT.payroll.dailyCalculation.forEach(d=>dailyAOA.push([d.employeeName,d.date,round2(d.rawHours),round2(d.lunchHours),round2(d.paidHours),round2(d.regularHours),round2(d.overtimeHours),round2(d.doubleHours)]));
+  const wsDaily=XLSX.utils.aoa_to_sheet(dailyAOA); wsDaily['!cols']=[{wch:24},{wch:14},...Array(6).fill({wch:14})]; wsDaily['!autofilter']={ref:'A1:H1'};
+  XLSX.utils.book_append_sheet(wb,wsDaily,'Daily Calculation');
+
+  const otAOA=[['Employee','Date','Total Paid Hours','Regular Hours','Overtime Hours','Double Hours']];
+  RESULT.overtimeRows.forEach(r=>otAOA.push([r.fullname,r.dateISO,round2(r.hours),round2(r.reg),round2(r.ot),round2(r.dt)]));
+  otAOA.push(['Total','',round2(s.regularHours+s.overtimeHours+s.doubleHours),round2(s.regularHours),round2(s.overtimeHours),round2(s.doubleHours)]);
+  const wsOT=XLSX.utils.aoa_to_sheet(otAOA); wsOT['!cols']=Array(6).fill({wch:16});
+  XLSX.utils.book_append_sheet(wb,wsOT,'Overtime Calculation');
+
+  const rscAOA=[['Name','RSC hour','Rest Break Hours','Total Hours','RSC Pay','Rest Break Pay','Total Pay']];
+  RESULT.rscRows.forEach(r=>rscAOA.push([r.fullname,round2(r.rscH),round2(r.restH),round2(r.total),r.rscPay==null?'MISSING RATE':round2(r.rscPay),r.restPay==null?'MISSING RATE':round2(r.restPay),r.totalPay==null?'MISSING RATE':round2(r.totalPay)]));
+  rscAOA.push(['Grand Total',round2(s.rscHours),round2(s.restHours),round2(s.rscHours+s.restHours),round2(s.rscPay),round2(s.restPay),round2(s.rscPay+s.restPay)]);
+  const wsRSC=XLSX.utils.aoa_to_sheet(rscAOA); wsRSC['!cols']=Array(7).fill({wch:16});
+  XLSX.utils.book_append_sheet(wb,wsRSC,'RSC and REST');
+
+  const jobsAOA=[['Job Code','Row Count','Total Hours','Total Pay','Paid-Hours Treatment']];
+  [...RESULT.jobTotals.entries()].sort((a,b)=>b[1].hours-a[1].hours).forEach(([code,j])=>jobsAOA.push([code,j.rows,round2(j.hours),j.payKnown?round2(j.pay):'PARTIAL - MISSING RATE',normalizeCode(code)==='lunch break'?'EXCLUDED FROM PAID HOURS':'INCLUDED']));
+  const wsJobs=XLSX.utils.aoa_to_sheet(jobsAOA); wsJobs['!cols']=[{wch:24},{wch:12},{wch:14},{wch:18},{wch:28}]; wsJobs['!autofilter']={ref:'A1:E1'};
+  XLSX.utils.book_append_sheet(wb,wsJobs,'Job Codes');
+
+  const ratesAOA=[['Payroll ID','Username','Full Name','Pay Rate','Notes']]; rateRows.forEach(r=>ratesAOA.push([r.payrollId||'',r.username||'',r.name,Number.isFinite(Number(r.rate))?round2(Number(r.rate)):'',r.notes]));
+  const wsRates=XLSX.utils.aoa_to_sheet(ratesAOA); wsRates['!cols']=[{wch:24},{wch:12},{wch:36}];
+  XLSX.utils.book_append_sheet(wb,wsRates,'Hourly Rates');
+
+  const wcMasterAOA=[['WC Code','Rate','Notes']];wcRateRows.forEach(r=>wcMasterAOA.push([r.code,r.rate??'',r.notes||'']));XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(wcMasterAOA),'WC Rate Master');
+  const rulesAOA=[['Employee Identifier','WC Code','Special Rule','Service Fee %','Allocation %']];specialRuleRows.forEach(r=>rulesAOA.push([r.identifier,r.wcCode,r.rule,r.feePct??'',r.allocationPct??'']));XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rulesAOA),'Employee Special Rules');
+  const aliasAOA=[['Timesheet ID Username or Name','Gusto Employee Name','Notes']];aliasRows.forEach(r=>aliasAOA.push([r.source,r.gusto,r.notes||'']));XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(aliasAOA),'Employee Aliases');
+
+  const gustoAOA=[['Post-Payroll Gusto Reconciliation'],['Gusto General Report',GUSTO_STATE.fileName||'NOT UPLOADED'],['Status',GUSTO_STATE.status||'NOT CHECKED'],['Final Payroll Status',getFinalReadiness()],[],['Prepared Employee','Gusto Employee','Prepared Regular','Gusto Regular','Regular Diff','Prepared OT','Gusto OT','OT Diff','Prepared Double','Gusto Double','Double Diff','Status','Reason']];
+  if(GUSTO_STATE.comparison)GUSTO_STATE.comparison.rows.forEach(r=>gustoAOA.push([r.employee,r.gustoName,r.pRegular??'',r.gRegular??'',r.regularDiff??'',r.pOT??'',r.gOT??'',r.otDiff??'',r.pDouble??'',r.gDouble??'',r.doubleDiff??'',r.status,r.reason]));
+  gustoAOA.push([],['Actual values read from Gusto'],['Employer Tax',GUSTO_STATE.actual?.employerTax??''],['Net Pay',GUSTO_STATE.actual?.netPay??''],['Payroll Tax Credit',GUSTO_STATE.actual?.debitTax??''],['Employee Checks',GUSTO_STATE.actual?.employeeChecks??''],['Deductions / Garnishments',GUSTO_STATE.actual?.deductions??'']);
+  if(GUSTO_STATE.warnings?.length){gustoAOA.push([],['Warnings / Errors']);[...new Set(GUSTO_STATE.warnings)].forEach(w=>gustoAOA.push([w]));}
+  const wsGusto=XLSX.utils.aoa_to_sheet(gustoAOA);wsGusto['!cols']=[{wch:38},{wch:20},{wch:20},{wch:18},{wch:14}];XLSX.utils.book_append_sheet(wb,wsGusto,'Gusto Reconciliation');
+
+  const revAOA=[['Source Row Number','Employee','Date','Hours','Jobcode 1','Jobcode 2','Reason','Severity']];
+  RESULT.review.forEach(r=>revAOA.push([r.sourceRow,r.employee,r.date,r.hours,r.jobcode_1,r.jobcode_2,r.reason,r.severity]));
+  const wsRev=XLSX.utils.aoa_to_sheet(revAOA); wsRev['!cols']=[{wch:10},{wch:20},{wch:14},{wch:10},{wch:16},{wch:16},{wch:30},{wch:12}];
+  XLSX.utils.book_append_sheet(wb,wsRev,'Review');
+
+  const fname = 'Blunted_Payroll_'+(s.period.start||'export')+'_to_'+(s.period.end||'export')+'.xlsx';
+  
+  // Confirmed downstream payroll review / post-payroll reconciliation outputs
+  const reviewAOA=[['PRE-PAYROLL Review Checkpoint'],['Review Status',PRE_APPROVAL.status],['Review Timestamp',PRE_APPROVAL.timestamp||''],[],['Employee','Rate','Employee Hours','Regular','OT','Double','Payroll Total','Warnings / Errors']];
+  RESULT.payroll.employees.forEach(e=>{const t=e.totals;const warns=RESULT.review.filter(x=>normalizeName(x.employee)===normalizeName(e.employeeName)).map(x=>x.reason).join('; ');reviewAOA.push([e.employeeName,e.rate??'',round2(t.paidHours),round2(t.regularHours),round2(t.overtimeHours),round2(t.doubleHours),t.totalWages??'',warns]);});
+  if(GUSTO_STATE.actual&&Object.keys(GUSTO_STATE.actual).length){reviewAOA.push([],['Actual Payroll Totals'],['Regular Wages',GUSTO_STATE.actual.regularWages],['Overtime Wages',GUSTO_STATE.actual.overtimeWages],['Double-Time Wages',GUSTO_STATE.actual.doubleWages],['Sick Time',GUSTO_STATE.actual.sickTime],['Employer Tax',GUSTO_STATE.actual.employerTax],['Net Pay',GUSTO_STATE.actual.netPay],['Payroll Tax Credit',GUSTO_STATE.actual.debitTax],['Employee Checks',GUSTO_STATE.actual.employeeChecks],['Deductions / Garnishments',GUSTO_STATE.actual.deductions]);}
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(reviewAOA),'Payroll Review');
+  if(GUSTO_STATE.calc){
+    const wcAOA=[['Code','Regular Pay','Overtime','2/3 OT for WC','Total WC Basis','WC Rate','WC Amount']];GUSTO_STATE.calc.wc.groups.forEach(g=>wcAOA.push([g.code,g.regular,g.overtime,g.otWcBasis,g.wcBasis,g.rate??'MISSING',g.wcAmount??'NEEDS REVIEW']));XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(wcAOA),'WC Calculation');
+    const valAOA=[['WC Source Validation'],['Code','Configured','WC Sheet','HZ & EL Sheet','Status']];GUSTO_STATE.calc.sourceValidation.forEach(x=>valAOA.push([x.code,x.configured??'NOT CONFIGURED',x.wc??'N/A',x.hz??'N/A',x.status]));XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(valAOA),'WC Source Validation');
+    const specialAOA=[['Employee','Rule','WC Code','Regular incl Sick','OT','1/3 OT Exempt','WC Basis','WC Rate','WC','Employer Tax','Service Fee %','Fee','Allocation %','Invoice Total']];[...(GUSTO_STATE.calc.hzEl||[]),...(GUSTO_STATE.calc.paul||[])].forEach(x=>specialAOA.push([x.name,x.rule,x.wcCode,x.regular,x.ot,x.exempt,x.wcBasis,x.wcRate??'MISSING',x.wc??'NEEDS REVIEW',x.employerTax??'BLOCKED',x.feePct??'NEEDS REVIEW',x.fee??'NEEDS REVIEW',x.allocationPct??'',x.invoiceTotal??'NEEDS REVIEW']));XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(specialAOA),'Special Calculations');
+  }
+XLSX.writeFile(wb, fname);
+}
+
+['doubleMultiplier'].forEach(id=>{const e=document.getElementById(id);if(e)e.addEventListener('input',()=>invalidatePreApproval());});
+
+document.getElementById('approvalBox').innerHTML='<strong>NOT REVIEWED</strong><div class="small">Review the results, then approve to unlock the Gusto step.</div>';
+</script>
+</body>
+</html>
