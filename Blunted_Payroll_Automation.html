@@ -6,6 +6,7 @@
 <title>Blunted Payroll Automation - Production Final</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
 :root{--bg:#f5f4f0;--panel:#fff;--ink:#1c231f;--dim:#5b6560;--line:#dcdcd3;--accent:#2f5d4c;--accent-ink:#fff;--ok:#2f7d54;--ok-bg:#e5f3ea;--bad:#a13c2b;--bad-bg:#fbe9e4;--warn:#8a6d1f;--warn-bg:#f7efdb;--mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace}
 @media(prefers-color-scheme:dark){:root{--bg:#141815;--panel:#1c2119;--ink:#eae7de;--dim:#9aa39a;--line:#33392f;--accent:#7fbfa0;--accent-ink:#0e1310;--ok:#7fd1a0;--ok-bg:#173324;--bad:#e0806a;--bad-bg:#3a201a;--warn:#e0c165;--warn-bg:#3a2f14}}
@@ -35,9 +36,22 @@
 </details>
 <div class="tabs" id="tabBar"></div><div id="tabContent"></div></div>
 
-<div class="panel workflow-card" id="approvalPanel"><div class="step-label">STEP 3</div><h2>Approve Payroll</h2><div class="stats" id="approvalStats"></div><div id="approvalReview" style="margin-top:12px"></div><div class="actions"><button class="primary" id="approveBtn" onclick="approvePayroll()">Approve for Gusto</button><button onclick="sendBack()">Send back</button></div><div class="ready-box" id="approvalBox"><strong>NOT REVIEWED</strong></div></div>
+<div class="panel workflow-card" id="previewPanel">
+<div class="step-label">STEP 3</div><h2>Gusto Payroll Preview Check</h2>
+<div class="hint">Upload the Gusto payroll preview PDF generated before payroll is submitted. This checks the prepared timesheet payroll against Gusto's preview before approval — it does not touch the post-payroll Gusto GL reconciliation in Step 5.</div>
+<div class="actions" style="margin-top:10px">
+  <label class="filebtn">Upload Gusto Preview PDF<input type="file" id="gustoPreviewInput" accept=".pdf"></label>
+  <button onclick="clearGustoPreview()">Clear preview</button>
+</div>
+<div class="hint" id="gustoPreviewStatus">No Gusto preview PDF uploaded yet.</div>
+<div class="stats" id="previewStatGrid" style="margin-top:12px"></div>
+<div id="gustoPreviewSummary" style="margin-top:12px"></div>
+<div id="gustoPreviewComparison" style="margin-top:12px"></div>
+</div>
 
-<div class="panel workflow-card"><div class="step-label">STEP 4</div><h2>Confirm with Payroll GL</h2>
+<div class="panel workflow-card" id="approvalPanel"><div class="step-label">STEP 4</div><h2>Approve Payroll</h2><div class="stats" id="approvalStats"></div><div id="approvalReview" style="margin-top:12px"></div><div class="actions"><button class="primary" id="approveBtn" onclick="approvePayroll()">Approve for Gusto</button><button onclick="sendBack()">Send back</button></div><div class="ready-box" id="approvalBox"><strong>NOT REVIEWED</strong></div></div>
+
+<div class="panel workflow-card"><div class="step-label">STEP 5 · POST-PAYROLL</div><h2>Confirm with Payroll GL</h2>
 <div class="two-col">
   <div><h3>Regular Gusto General Report — Same Period Only</h3>
     <label class="filebtn" id="gustoUploadLabel">Upload regular payroll GL<input type="file" id="gustoFileInput" accept=".xlsx,.xls" disabled></label>
@@ -62,7 +76,7 @@
 
 <div class="stats" id="gustoStats" style="margin-top:12px"></div><div id="gustoBox" style="margin-top:12px"></div></div>
 
-<div class="panel workflow-card"><div class="step-label">STEP 5</div><h2>Download</h2>
+<div class="panel workflow-card"><div class="step-label">STEP 6</div><h2>Download</h2>
 <div class="actions">
 <button class="primary" id="downloadBtn" onclick="downloadWorkbook()" disabled>Download Client Payroll Workbook</button>
 <button id="weeklyGustoDownloadBtn" onclick="downloadUpdatedWeeklyGusto()" disabled>Download Updated Weekly Gusto Workbook</button>
@@ -103,7 +117,7 @@ const BIWEEKLY_RULES={
 };
 const REQUIRED=['fname','lname','local_date','local_day','local_start_time','local_end_time','tz','hours','jobcode_1','jobcode_2','jobcode_3','location'];
 const TABS=['Summary','Employee Payroll','Daily Calculation','Data','Overtime Calculation','RSC + Rest','Rest Breaks','Job Codes','Hourly Rates','Review','Post-Payroll Reconciliation','Biweekly Allocations'];
-let RAW_ROWS=null,RESULT=null,activeTab='Summary',PAY_PERIOD_SOURCE='',APPROVAL={status:'NOT REVIEWED',timestamp:''},GUSTO=emptyGusto(),BIWEEKLY=emptyBiweekly();
+let RAW_ROWS=null,RESULT=null,activeTab='Summary',PAY_PERIOD_SOURCE='',APPROVAL={status:'NOT REVIEWED',timestamp:''},GUSTO=emptyGusto(),BIWEEKLY=emptyBiweekly(),GUSTO_PREVIEW=emptyGustoPreview();
 
 let EMPLOYEE_TAX = new Map(); // key = "Weekly|normalized name" or "Biweekly|normalized name"; value = {amount,source}
 function employeeTaxKey(scope,name){return `${scope}|${normalizeName(name)}`;}
@@ -258,6 +272,9 @@ function loadEmployeeTaxFile(f){
 
 function emptyGusto(){return {uploaded:false,fileName:'',period:null,sourceWorkbook:null,actual:{},employeeActual:new Map(),comparison:null,warnings:[],status:'NOT CHECKED',basic:null,detailed:null,wcMatrix:null,hzMatrix:null,sourceWc:[],taxAssignmentValid:false,taxMessage:'NOT CHECKED',wcCalc:null,special:[]};}
 function emptyBiweekly(){return {uploaded:false,fileName:'',period:null,sourceWorkbook:null,_actual:null,employeeActual:new Map(),rows:[],warnings:[],status:'NOT CHECKED'};}
+function emptyGustoPreview(){return {uploaded:false,fileName:'',period:null,payDate:null,employees:new Map(),totals:{regularHours:null,overtimeHours:null,doubleHours:null,regularAmount:null,overtimeAmount:null,doubleAmount:null,additionalEarnings:null,grossPay:null},comparison:null,parsingWarnings:[],blockingIssues:[],status:'NOT CHECKED'};}
+const PREVIEW_TOLERANCE={hours:0.01,rate:0.01,money:0.02};
+function approxEqual(a,b,tol){if(a==null||b==null)return false;const na=Number(a),nb=Number(b);if(!Number.isFinite(na)||!Number.isFinite(nb))return false;return Math.abs(na-nb)<=tol;}
 function normalizeName(v=''){return String(v).trim().replace(/\s+/g,' ').toLowerCase();}
 function normalizeCode(v=''){return String(v).trim().replace(/\s+/g,' ').toLowerCase();}
 function normalizeHeader(v=''){return String(v).trim().toLowerCase().replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim();}
@@ -294,7 +311,7 @@ function addJobRule(){jobRuleRows.push({code:'',category:'PAYROLL'});drawJobRule
 function addFixedRule(){fixedRows.push({name:'',amount:null,maxHours:null});drawFixed();}
 function restoreDefaultRates(){rateRows=EMBEDDED_RATES.map(x=>({...x}));drawRates();invalidate();document.getElementById('rateFileStatus').textContent='Supplied updated hourly-rate master restored.';}
 function toggleSetup(){const x=document.getElementById('setupBox');x.open=!x.open;}
-function invalidate(){if(APPROVAL.status==='APPROVED')APPROVAL={status:'NOT REVIEWED',timestamp:''};if(GUSTO.uploaded)GUSTO=emptyGusto();if(BIWEEKLY.uploaded)BIWEEKLY=emptyBiweekly();if(RAW_ROWS)process();}
+function invalidate(){if(APPROVAL.status==='APPROVED')APPROVAL={status:'NOT REVIEWED',timestamp:''};if(GUSTO.uploaded)GUSTO=emptyGusto();if(BIWEEKLY.uploaded)BIWEEKLY=emptyBiweekly();if(GUSTO_PREVIEW.uploaded)GUSTO_PREVIEW=emptyGustoPreview();if(RAW_ROWS)process();else renderGustoPreview();}
 
 function inferPeriod(name){let m=String(name).match(/(20\d{2})[-_.](\d{2})[-_.](\d{2}).*?(?:thru|through|to)[ _-]*(20\d{2})[-_.](\d{2})[-_.](\d{2})/i);if(m)return {start:`${m[1]}-${m[2]}-${m[3]}`,end:`${m[4]}-${m[5]}-${m[6]}`};m=String(name).match(/(\d{1,2})[.\/-](\d{1,2})[.\/-](20\d{2}).*?(?:thru|through|to)[ _-]*(\d{1,2})[.\/-](\d{1,2})[.\/-](20\d{2})/i);return m?{start:`${m[3]}-${String(m[1]).padStart(2,'0')}-${String(m[2]).padStart(2,'0')}`,end:`${m[6]}-${String(m[4]).padStart(2,'0')}-${String(m[5]).padStart(2,'0')}`}:null;}
 function monthNo(v){const m={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};return m[String(v||'').slice(0,3).toLowerCase()]||null;}
@@ -312,7 +329,7 @@ function onRows(data,label){data=data.filter(r=>Object.values(r).some(v=>v!==''&
 for(const r of RAW_ROWS){const n=(r.fname+' '+r.lname).trim().replace(/\s+/g,' ');if(n&&!employeeRows.some(x=>normalizeName(x.name)===normalizeName(n)))employeeRows.push({name:n,mode:'REVIEW'});if(r.jobcode_1&&!jobRuleRows.some(x=>normalizeCode(x.code)===normalizeCode(r.jobcode_1)))jobRuleRows.push({code:r.jobcode_1,category:'PAYROLL'});}drawEmployees();drawJobRules();document.getElementById('fileStatus').textContent=`${RAW_ROWS.length} rows loaded from ${label}.`;document.getElementById('results').style.display='block';process();}
 
 function mkReview(r,name,reason,severity='Blocking'){return {sourceRow:r?.sourceRow??'CONFIG',employee:name||'(all)',date:r?.local_date||'',hours:r?.hours_raw??'',jobcode_1:r?.jobcode_1||'',reason,severity};}
-function process(){if(!RAW_ROWS)return;APPROVAL.status=APPROVAL.status==='APPROVED'?'NOT REVIEWED':APPROVAL.status;GUSTO=emptyGusto();BIWEEKLY=emptyBiweekly();const review=[],seen=new Set(),dataRows=[],empDisplay=new Map();const start=toISODate(document.getElementById('payPeriodStart').value),end=toISODate(document.getElementById('payPeriodEnd').value),freq=document.getElementById('payrollFrequency').value,need=freq==='Biweekly'?14:7,days=inclusiveDays(start,end);if(!start||!end)review.push(mkReview(null,'','Pay period start and end are required.'));else if(start>end)review.push(mkReview(null,'','Pay period start must be on or before end.'));else if(days!==need)review.push(mkReview(null,'',`${freq} payroll requires exactly ${need} calendar days; selected period has ${days}.`));
+function process(){if(!RAW_ROWS)return;APPROVAL.status=APPROVAL.status==='APPROVED'?'NOT REVIEWED':APPROVAL.status;GUSTO=emptyGusto();BIWEEKLY=emptyBiweekly();GUSTO_PREVIEW=emptyGustoPreview();const review=[],seen=new Set(),dataRows=[],empDisplay=new Map();const start=toISODate(document.getElementById('payPeriodStart').value),end=toISODate(document.getElementById('payPeriodEnd').value),freq=document.getElementById('payrollFrequency').value,need=freq==='Biweekly'?14:7,days=inclusiveDays(start,end);if(!start||!end)review.push(mkReview(null,'','Pay period start and end are required.'));else if(start>end)review.push(mkReview(null,'','Pay period start must be on or before end.'));else if(days!==need)review.push(mkReview(null,'',`${freq} payroll requires exactly ${need} calendar days; selected period has ${days}.`));
 for(const r of RAW_ROWS){const name=(r.fname+' '+r.lname).trim().replace(/\s+/g,' '),key=employeeKey(r,name),date=toISODate(r.local_date),h=safeNumber(r.hours_raw),cat=jobCategory(r.jobcode_1),mode=employeeMode(name);empDisplay.set(key,name);const dupKey=JSON.stringify([r.fname,r.lname,r.local_date,r.local_start_time,r.local_end_time,r.hours_raw,r.jobcode_1,r.jobcode_2,r.jobcode_3,r.location]);const dup=seen.has(dupKey);seen.add(dupKey);if(!r.fname||!r.lname)review.push(mkReview(r,name,'Missing first/last name'));if(!date)review.push(mkReview(r,name,'Missing or invalid local_date'));if(h==null)review.push(mkReview(r,name,'Missing or non-numeric hours'));else if(h<0)review.push(mkReview(r,name,'Negative hours','Warning'));if(!r.jobcode_1)review.push(mkReview(r,name,'Missing jobcode_1'));if(mode==='REVIEW')review.push(mkReview(r,name,'Employee is not classified in Employee Master'));if(dup)review.push(mkReview(r,name,'Duplicate source row','Warning'));if(date&&start&&end&&(date<start||date>end))review.push(mkReview(r,name,'Timesheet row falls outside selected pay period'));const rr=resolveRate(name,date);if(h!=null&&cat!=='EXCLUDE'&&mode!=='EXCLUDE'&&rr.rate==null)review.push(mkReview(r,name,rr.reason||'Missing rate'));dataRows.push({...r,fullname:name,employeeKey:key,dateISO:date,hours:h,jobCategory:cat,employeeMode:mode,route:null,payrate:rr.rate,rateSource:rr.source||'',totalPay:rr.rate!=null&&h!=null?roundMoney(h*rr.rate):null});}
 // Route rows by employee/day. Rest follows adjacent work stream; ambiguous rest is blocking.
 const groups=new Map();for(const x of dataRows){const k=x.employeeKey+'||'+x.dateISO;if(!groups.has(k))groups.set(k,[]);groups.get(k).push(x);}for(const rows of groups.values()){rows.sort((a,b)=>a.sourceRow-b.sourceRow);const baseRoute=x=>{if(x.employeeMode==='EXCLUDE'||x.employeeMode==='REVIEW')return 'EXCLUDE';if(x.jobCategory==='EXCLUDE')return 'EXCLUDE';if(x.jobCategory==='REST')return 'REST';if(x.employeeMode==='CASH')return 'CASH';if(x.jobCategory==='CASH')return 'CASH';return 'PAYROLL';};const br=rows.map(baseRoute);for(let i=0;i<rows.length;i++){const x=rows[i];if(br[i]!=='REST'){x.route=br[i];continue;}let p=null,n=null;for(let j=i-1;j>=0;j--){if(br[j]==='PAYROLL'||br[j]==='CASH'){p=br[j];break;}}for(let j=i+1;j<rows.length;j++){if(br[j]==='PAYROLL'||br[j]==='CASH'){n=br[j];break;}}if(x.employeeMode==='CASH')x.route='CASH';else if(p&&n&&p===n)x.route=p;else if(p&&!n)x.route=p;else if(n&&!p)x.route=n;else if(!p&&!n){const hasP=br.includes('PAYROLL'),hasC=br.includes('CASH');if(hasP&&!hasC)x.route='PAYROLL';else if(hasC&&!hasP)x.route='CASH';else{x.route='AMBIGUOUS';review.push(mkReview(x,x.fullname,'Rest break cannot be allocated to Payroll or RSC cash on this day'));}}else{x.route='AMBIGUOUS';review.push(mkReview(x,x.fullname,'Rest break sits between Payroll and RSC cash work; allocation requires review'));}}}
@@ -334,7 +351,7 @@ const hourDiff=round2(rawHours-(lunchHours+payrollHours+cashHours+excludedHours)
 RESULT={dataRows,review,empDisplay,payroll:{employees,daily,consolidated},cashRows,cashTotals,restRows,jobTotals,period:{start,end,frequency:freq,days,source:PAY_PERIOD_SOURCE},stats:{sourceRows:RAW_ROWS.length,employees:empDisplay.size,rawHours:round2(rawHours),lunchHours:round2(lunchHours),payrollHours:round2(payrollHours),cashHours:round2(cashHours),excludedHours:round2(excludedHours),hourDiff,reviewCount:new Set(review.map(r=>r.sourceRow+'|'+r.reason)).size,...consolidated}};
 renderAll();}
 
-function renderAll(){renderStats();renderIssue();buildTabs();renderApproval();renderGusto();drawEmployeeTaxTable();syncButtons();}
+function renderAll(){renderStats();renderIssue();buildTabs();renderGustoPreview();renderApproval();renderGusto();drawEmployeeTaxTable();syncButtons();}
 function renderStats(){const s=RESULT.stats;document.getElementById('statGrid').innerHTML=[['Employees',s.employees],['Source Rows',s.sourceRows],['Raw Hours',fmtH(s.rawHours)],['Payroll Hours',fmtH(s.payrollHours)],['Cash Hours',fmtH(s.cashHours)],['Regular',fmtH(s.regularHours)],['OT',fmtH(s.overtimeHours)],['Double',fmtH(s.doubleHours)],['Review',s.reviewCount]].map(([l,n])=>`<div class="stat"><div class="n">${n}</div><div class="l">${l}</div></div>`).join('');}
 function renderIssue(){const b=RESULT.review.filter(x=>x.severity==='Blocking'),w=RESULT.review.filter(x=>x.severity!=='Blocking'),n=a=>new Set(a.map(x=>x.sourceRow+'|'+x.reason)).size;document.getElementById('issueBanner').innerHTML=b.length?`<div class="issue-bad" onclick="setTab('Review')"><b>${n(b)} blocking issue(s)</b> must be fixed before approval.${w.length?' '+n(w)+' warning(s) also require review.':''}</div>`:w.length?`<div class="note" onclick="setTab('Review')"><b>${n(w)} warning(s)</b> to review before approval.</div>`:'<div class="issue-ok">✓ No calculation issues found.</div>';}
 function buildTabs(){document.getElementById('tabBar').innerHTML=TABS.map(t=>`<div class="tab ${t===activeTab?'active':''}" onclick="setTab('${t}')">${t}</div>`).join('');renderTab();}
@@ -406,9 +423,29 @@ function summaryHtml(){
   return html;
 }
 
-function readiness(){if(!RESULT)return 'NOT READY — TIMESHEET REQUIRED';if(RESULT.review.some(x=>x.severity==='Blocking'))return 'BLOCKED — TECHNICAL REVIEW REQUIRED';if(APPROVAL.status==='APPROVED')return 'APPROVED — READY FOR GUSTO';if(APPROVAL.status==='SENT BACK')return 'SENT BACK — CORRECTION REQUIRED';return 'READY — APPROVAL REQUIRED';}
+function readiness(){
+  if(!RESULT)return 'NOT READY — TIMESHEET REQUIRED';
+  if(RESULT.review.some(x=>x.severity==='Blocking'))return 'BLOCKED — TECHNICAL REVIEW REQUIRED';
+  if(!GUSTO_PREVIEW.uploaded)return 'NOT READY — GUSTO PREVIEW REQUIRED';
+  if(GUSTO_PREVIEW.status==='BLOCKED')return 'BLOCKED — GUSTO PREVIEW INVALID';
+  if(GUSTO_PREVIEW.status==='MISMATCH')return 'BLOCKED — GUSTO PREVIEW MISMATCH';
+  if(GUSTO_PREVIEW.status==='REVIEW REQUIRED')return 'REVIEW REQUIRED — GUSTO PREVIEW EXCEPTIONS';
+  if(APPROVAL.status==='APPROVED')return 'APPROVED — READY FOR GUSTO';
+  if(APPROVAL.status==='SENT BACK')return 'SENT BACK — CORRECTION REQUIRED';
+  return 'READY — APPROVAL REQUIRED';
+}
 function renderApproval(){const st=readiness(),bl=RESULT?RESULT.review.filter(x=>x.severity==='Blocking').length:0;document.getElementById('approvalStats').innerHTML=`<div class="stat"><div class="n"><span class="badge ${st.includes('BLOCKED')?'b-bad':APPROVAL.status==='APPROVED'?'b-ok':'b-warn'}">${esc(st)}</span></div><div class="l">Status</div></div><div class="stat"><div class="n">${bl}</div><div class="l">Blocking items</div></div>`;document.getElementById('approvalReview').innerHTML=RESULT?tableHtml(['Employee','Rate','Paid Hours','Regular','OT','Double','Total Wages'],RESULT.payroll.employees.map(e=>[e.employeeName,e.rateLabel,fmtH(e.paidHours),fmtH(e.regularHours),fmtH(e.overtimeHours),fmtH(e.doubleHours),fmtM(e.totalWages)])):'';document.getElementById('approvalBox').className='ready-box '+(APPROVAL.status==='APPROVED'?'approval-ok':'');document.getElementById('approvalBox').innerHTML=APPROVAL.status==='APPROVED'?`<b>✓ APPROVED</b><div class="small">${new Date(APPROVAL.timestamp).toLocaleString()} — Gusto uploads are unlocked.</div>`:`<b>${esc(APPROVAL.status)}</b><div class="small">${esc(st)}</div>`;document.getElementById('approveBtn').disabled=APPROVAL.status==='APPROVED';const unlocked=APPROVAL.status==='APPROVED';document.getElementById('gustoFileInput').disabled=!unlocked;document.getElementById('biweeklyFileInput').disabled=!unlocked;document.getElementById('gustoUploadLabel').style.opacity=unlocked?'1':'.55';document.getElementById('biweeklyUploadLabel').style.opacity=unlocked?'1':'.55';}
-function approvePayroll(){if(readiness()!=='READY — APPROVAL REQUIRED'){alert('Resolve blocking items before approval.');return;}const warnings=RESULT.review.filter(x=>x.severity!=='Blocking').length;if(warnings&&!confirm(`There are ${warnings} warning(s). Approve anyway?`))return;APPROVAL={status:'APPROVED',timestamp:new Date().toISOString()};renderAll();}
+function approvePayroll(){
+  const st=readiness();
+  if(st==='REVIEW REQUIRED — GUSTO PREVIEW EXCEPTIONS'){
+    if(!confirm('The Gusto preview has zero-pay or unexpected-employee items marked REVIEW REQUIRED. Approve anyway?'))return;
+  }else if(st!=='READY — APPROVAL REQUIRED'){
+    alert('Resolve blocking items before approval.');return;
+  }
+  const warnings=RESULT.review.filter(x=>x.severity!=='Blocking').length;
+  if(warnings&&!confirm(`There are ${warnings} warning(s). Approve anyway?`))return;
+  APPROVAL={status:'APPROVED',timestamp:new Date().toISOString()};renderAll();
+}
 function sendBack(){APPROVAL={status:'SENT BACK',timestamp:new Date().toISOString()};renderAll();}
 function syncButtons(){
   const ok=APPROVAL.status==='APPROVED';
@@ -427,6 +464,192 @@ function syncButtons(){
 function parseLedger(matrix,sheetName){let hr=-1;for(let r=0;r<Math.min(matrix.length,50);r++){const h=(matrix[r]||[]).map(normalizeHeader);if(h.includes('account type')&&h.includes('account description')&&h.includes('debit')&&h.includes('credit')){hr=r;break;}}if(hr<0)return {error:'Ledger header not found',rows:[]};const hdr=matrix[hr].map(normalizeHeader),idx={};hdr.forEach((h,i)=>idx[h]=i);const rows=[];for(let r=hr+1;r<matrix.length;r++){const v=matrix[r]||[],type=String(v[idx['account type']]??'').trim(),desc=String(v[idx['account description']]??'').trim();if(!type&&normalizeHeader(desc)==='totals')break;if(!type&&!desc)continue;rows.push({sourceRow:r+1,type,desc,debit:safeNumber(v[idx.debit]),credit:safeNumber(v[idx.credit])});}return {sheetName,rows};}
 function wageEmployee(desc){const m=String(desc).match(/(?:Regular|Overtime|Double[- ]?Time|Sick Time Off) Wages? for (.+)$/i)||String(desc).match(/Sick Time Off for (.+)$/i);return m?m[1].trim():null;}
 function parsePayrollActual(basic,detailed){const b=basic?.rows||[],d=detailed?.rows||[],nt=r=>normalizeHeader(r.type),sum=(rows,pred,side='debit')=>roundMoney(rows.filter(pred).reduce((a,r)=>a+(Number(r[side])||0),0));const actual={regularWages:sum(b,r=>nt(r)==='regularwages'),overtimeWages:sum(b,r=>nt(r)==='overtimewages'),doubleWages:sum(b,r=>/double/.test(nt(r))&&/wage/.test(nt(r))),sickTime:sum(b,r=>nt(r)==='sicktimeoff'),employerTax:sum(b,r=>nt(r)==='employerficatax'||nt(r)==='employermedicaretax'),netPay:sum(b,r=>nt(r)==='debitnetpay','credit'),debitTax:sum(b,r=>nt(r)==='debittax','credit'),employeeChecks:sum(b,r=>nt(r)==='employeepaymentcheck','credit'),deductions:sum(b,r=>nt(r)==='garnishment','credit'),totalDebit:roundMoney(b.reduce((a,r)=>a+(Number(r.debit)||0),0)),totalCredit:roundMoney(b.reduce((a,r)=>a+(Number(r.credit)||0),0))};actual.balanced=Math.abs(actual.totalDebit-actual.totalCredit)<=0.01;const em=new Map(),order=[];for(const r of d){const t=nt(r);if(['regularwages','overtimewages','sicktimeoff'].includes(t)||/double/.test(t)){const name=wageEmployee(r.desc);if(!name)continue;const k=normalizeName(name);if(!em.has(k)){em.set(k,{employeeName:name,regular:0,ot:0,double:0,sick:0,employerTax:null});order.push(k);}const e=em.get(k);if(t==='regularwages')e.regular+=Number(r.debit)||0;else if(t==='overtimewages')e.ot+=Number(r.debit)||0;else if(t==='sicktimeoff')e.sick+=Number(r.debit)||0;else e.double+=Number(r.debit)||0;}}const fica=d.filter(r=>nt(r)==='employerficatax'),medi=d.filter(r=>nt(r)==='employermedicaretax'),valid=order.length>0&&fica.length===order.length&&medi.length===order.length;if(valid)order.forEach((k,i)=>em.get(k).employerTax=roundMoney((Number(fica[i].debit)||0)+(Number(medi[i].debit)||0)));return {actual,employeeMap:em,order,taxValid:valid,taxMessage:`Employees ${order.length}; FICA rows ${fica.length}; Medicare rows ${medi.length}. ${valid?'Employer tax matched by employee order across FICA and Medicare blocks.':'Employer tax cannot be safely assigned by employee.'}`};}
+// ===================== GUSTO PAYROLL PREVIEW CHECK (pre-approval, PDF) =====================
+// Reads only RESULT.payroll.employees / RESULT.period / RESULT.stats. Never duplicates the
+// payroll calculation engine above, and never touches GUSTO/BIWEEKLY (the post-payroll GL state).
+if(typeof pdfjsLib!=='undefined')pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+const PREVIEW_HEADER_WORDS='(?:Description|Amount|Total|Totals|Hours|Rate|Contribution|Contributions|Deduction|Deductions|EmployeeDeduction|Employee|Employer|Taxes|Type|Payment|Information|Earnings|Payroll)';
+async function extractPdfText(arrayBuffer){
+  const doc=await pdfjsLib.getDocument({data:arrayBuffer}).promise;
+  const parts=[];
+  for(let p=1;p<=doc.numPages;p++){const page=await doc.getPage(p),content=await page.getTextContent();parts.push(content.items.map(it=>it.str).join(' '));}
+  return parts.join(' ').replace(/\s+/g,' ').trim();
+}
+function previewParseRow(block,label){
+  const re=new RegExp(label+String.raw`\s+(--|[\d,]+\.\d+)\s+(--|\$[\d,]+\.\d+)\s+\$([\d,]+\.\d+)`,'i');
+  const m=block.match(re);if(!m)return null;
+  return {hours:m[1]==='--'?null:parseFloat(m[1].replace(/,/g,'')),rate:m[2]==='--'?null:parseFloat(m[2].replace(/[$,]/g,'')),amount:parseFloat(m[3].replace(/,/g,''))};
+}
+function previewEmployeeKey(name){return normalizeName(aliasTarget(name));}
+function parseGustoPreviewPdf(fullText){
+  const warnings=[];
+  let period=null;
+  const pm=fullText.match(/payroll period:?\s*(\d{2}\/\d{2}\/\d{4})\s*[-–—]\s*(\d{2}\/\d{2}\/\d{4})/i);
+  if(pm)period={start:toISODateMDY(pm[1]),end:toISODateMDY(pm[2])};else warnings.push('Could not find the payroll period in the PDF.');
+  const pdm=fullText.match(/pay\s*day:?\s*(\d{2}\/\d{2}\/\d{4})/i);
+  const payDate=pdm?toISODateMDY(pdm[1]):null;
+  const nameRe=new RegExp(String.raw`(?<!${PREVIEW_HEADER_WORDS}\s)([A-Z][A-Za-z'’.\-]+(?:\s[A-Z][A-Za-z'’.\-]+){0,2}?),\s([A-Z][A-Za-z'’.\-]+(?:\s[A-Z][A-Za-z'’.\-]+){0,1}?)\s+(Salary\/No overtime|Paid by the hour)`,'g');
+  const matches=[];let m;
+  while((m=nameRe.exec(fullText)))matches.push({index:m.index,last:m[1],first:m[2],type:m[3]});
+  // Recover a first employee that sits immediately after the report's own column-header row
+  // (the header-word guard above intentionally blocks that position). Bounded to a single
+  // word each side so header vocabulary is never pulled in as a name.
+  if(matches.length){
+    const prefix=fullText.slice(0,matches[0].index);
+    const tailRe=/([A-Z][A-Za-z'’.\-]+),\s*([A-Z][A-Za-z'’.\-]+)\s+(Salary\/No overtime|Paid by the hour)/;
+    const tm=prefix.match(tailRe);
+    if(tm)matches.unshift({index:tm.index,last:tm[1],first:tm[2],type:tm[3]});
+  }else{warnings.push('No employee rows could be found in the PDF. Check that this is a Gusto payroll preview export.');}
+  const totalsIdx=fullText.search(/Payroll Totals/i);
+  const employees=new Map();
+  for(let i=0;i<matches.length;i++){
+    const start=matches[i].index;
+    const end=i+1<matches.length?matches[i+1].index:(totalsIdx>start?totalsIdx:fullText.length);
+    const block=fullText.slice(start,end);
+    const employeeName=`${matches[i].first} ${matches[i].last}`.replace(/\s+/g,' ').trim();
+    const row={
+      salaryNoOvertime:matches[i].type==='Salary/No overtime',
+      regular:previewParseRow(block,'Regular'),
+      overtime:previewParseRow(block,'Overtime'),
+      double:previewParseRow(block,String.raw`Double[- ]?Time`),
+      additional:previewParseRow(block,'Additional\\s+Earnings'),
+      gross:previewParseRow(block,'Gross')
+    };
+    const key=previewEmployeeKey(employeeName);
+    if(employees.has(key))warnings.push(`Employee "${employeeName}" appears more than once in the PDF; only the last occurrence was used.`);
+    employees.set(key,{employeeName,...row});
+  }
+  let totals={regularHours:null,overtimeHours:null,doubleHours:null,regularAmount:null,overtimeAmount:null,doubleAmount:null,additionalEarnings:null,grossPay:null};
+  if(totalsIdx>=0){
+    const totBlock=fullText.slice(totalsIdx);
+    const tReg=previewParseRow(totBlock,'Regular'),tOT=previewParseRow(totBlock,'Overtime'),tD=previewParseRow(totBlock,String.raw`Double[- ]?Time`),tAdd=previewParseRow(totBlock,'Additional\\s+Earnings'),tGross=previewParseRow(totBlock,'Gross');
+    totals={regularHours:tReg?.hours??null,overtimeHours:tOT?.hours??null,doubleHours:tD?.hours??null,regularAmount:tReg?.amount??null,overtimeAmount:tOT?.amount??null,doubleAmount:tD?.amount??null,additionalEarnings:tAdd?.amount??null,grossPay:tGross?.amount??null};
+  }else warnings.push('Could not find a Payroll Totals section in the PDF; payroll-total reconciliation (Layer 3) will be skipped.');
+  return {period,payDate,employees,totals,parsingWarnings:warnings};
+}
+function toISODateMDY(s){const m=String(s).match(/(\d{2})\/(\d{2})\/(20\d{2})/);return m?`${m[3]}-${m[1]}-${m[2]}`:null;}
+function buildPreviewComparison(){
+  const rows=[],used=new Set(),reviewNeeded=[];
+  for(const e of RESULT.payroll.employees){
+    const target=aliasTarget(e.employeeName),key=previewEmployeeKey(target),g=GUSTO_PREVIEW.employees.get(key),reasons=[];
+    if(g)used.add(key);
+    const gRegH=g?.regular?.hours??null,gOTH=g?.overtime?.hours??null,gDH=g?.double?.hours??null;
+    const gRegRate=g?.regular?.rate??null,gRegPay=g?.regular?.amount??null,gOTPay=g?.overtime?.amount??null,gDPay=g?.double?.amount??null;
+    const gAdd=g?.additional?.amount??null,gGross=g?.gross?.amount??null;
+    let status;
+    if(!g){status='MISSING FROM GUSTO';reasons.push('PREPARED EMPLOYEE NOT FOUND IN GUSTO PREVIEW');}
+    else{
+      if(!approxEqual(e.regularHours,gRegH??0,PREVIEW_TOLERANCE.hours)&&!(e.regularHours===0&&gRegH==null))reasons.push('REGULAR HOURS MISMATCH');
+      if(!approxEqual(e.overtimeHours,gOTH??0,PREVIEW_TOLERANCE.hours)&&!(e.overtimeHours===0&&gOTH==null))reasons.push('OT HOURS MISMATCH');
+      if(!approxEqual(e.doubleHours,gDH??0,PREVIEW_TOLERANCE.hours)&&!(e.doubleHours===0&&gDH==null))reasons.push('DOUBLE TIME HOURS MISMATCH');
+      if(e.rate!=null&&gRegRate!=null&&!approxEqual(e.rate,gRegRate,PREVIEW_TOLERANCE.rate))reasons.push('RATE MISMATCH');
+      if(!approxEqual(e.regularPay||0,gRegPay??0,PREVIEW_TOLERANCE.money)&&!((e.regularPay||0)===0&&gRegPay==null))reasons.push('REGULAR PAY MISMATCH');
+      if(!approxEqual(e.overtimePay||0,gOTPay??0,PREVIEW_TOLERANCE.money)&&!((e.overtimePay||0)===0&&gOTPay==null))reasons.push('OT PAY MISMATCH');
+      if(!approxEqual(e.doublePay||0,gDPay??0,PREVIEW_TOLERANCE.money)&&!((e.doublePay||0)===0&&gDPay==null))reasons.push('DOUBLE TIME PAY MISMATCH');
+      status=reasons.length?'MISMATCH':'MATCH';
+    }
+    rows.push({prepared:e.employeeName,gusto:g?g.employeeName:'—',prepRegH:e.regularHours,gRegH,prepOTH:e.overtimeHours,gOTH,prepDH:e.doubleHours,gDH,prepRate:e.rate,gRegRate,prepRegPay:e.regularPay,gRegPay,prepOTPay:e.overtimePay,gOTPay,additional:gAdd,gustoGross:gGross,status,reason:reasons.join('; ')});
+  }
+  for(const [k,g] of GUSTO_PREVIEW.employees){
+    if(used.has(k))continue;
+    const zeroPay=g.gross?.amount===0||(g.gross==null&&!g.regular&&!g.overtime&&!g.double);
+    const status=zeroPay?'REVIEW REQUIRED':'UNEXPECTED GUSTO EMPLOYEE';
+    if(status==='REVIEW REQUIRED')reviewNeeded.push(g.employeeName);
+    rows.push({prepared:'—',gusto:g.employeeName,prepRegH:null,gRegH:g.regular?.hours??null,prepOTH:null,gOTH:g.overtime?.hours??null,prepDH:null,gDH:g.double?.hours??null,prepRate:null,gRegRate:g.regular?.rate??null,prepRegPay:null,gRegPay:g.regular?.amount??null,prepOTPay:null,gOTPay:g.overtime?.amount??null,additional:g.additional?.amount??null,gustoGross:g.gross?.amount??null,status,reason:zeroPay?'ZERO PAY / REVIEW — confirm this employee should not be on this payroll':'GUSTO EMPLOYEE NOT FOUND IN PREPARED PAYROLL'});
+  }
+  return {rows,reviewNeeded};
+}
+function previewInternalControlFailures(){
+  const failures=[];
+  for(const [,g] of GUSTO_PREVIEW.employees){
+    const reg=g.regular?.amount||0,ot=g.overtime?.amount||0,dbl=g.double?.amount||0,add=g.additional?.amount||0,gross=g.gross?.amount;
+    if(gross==null)continue;
+    const expected=reg+ot+dbl+add;
+    if(!approxEqual(expected,gross,PREVIEW_TOLERANCE.money))failures.push(`${g.employeeName}: components sum to ${fmtM(expected)} but Gusto Gross is ${fmtM(gross)}.`);
+  }
+  return failures;
+}
+function previewTotalsReconciliation(){
+  const t=GUSTO_PREVIEW.totals,fails=[];
+  if(t.regularHours==null&&t.overtimeHours==null&&t.grossPay==null)return fails;
+  let sumReg=0,sumOT=0,sumD=0,sumGross=0;
+  for(const [,g] of GUSTO_PREVIEW.employees){sumReg+=g.regular?.hours||0;sumOT+=g.overtime?.hours||0;sumD+=g.double?.hours||0;sumGross+=g.gross?.amount||0;}
+  if(t.regularHours!=null&&!approxEqual(sumReg,t.regularHours,PREVIEW_TOLERANCE.hours))fails.push(`Employee regular hours sum to ${fmtH(sumReg)} but the PDF's Payroll Totals shows ${fmtH(t.regularHours)}.`);
+  if(t.overtimeHours!=null&&!approxEqual(sumOT,t.overtimeHours,PREVIEW_TOLERANCE.hours))fails.push(`Employee OT hours sum to ${fmtH(sumOT)} but the PDF's Payroll Totals shows ${fmtH(t.overtimeHours)}.`);
+  if(t.doubleHours!=null&&!approxEqual(sumD,t.doubleHours,PREVIEW_TOLERANCE.hours))fails.push(`Employee double-time hours sum to ${fmtH(sumD)} but the PDF's Payroll Totals shows ${fmtH(t.doubleHours)}.`);
+  if(t.grossPay!=null&&!approxEqual(sumGross,t.grossPay,PREVIEW_TOLERANCE.money))fails.push(`Employee gross pay sums to ${fmtM(sumGross)} but the PDF's Payroll Totals shows ${fmtM(t.grossPay)}.`);
+  return fails;
+}
+function loadGustoPreview(f){
+  document.getElementById('gustoPreviewStatus').textContent='Reading '+f.name+' ...';
+  if(typeof pdfjsLib==='undefined'){document.getElementById('gustoPreviewStatus').innerHTML='<span style="color:var(--bad)">PDF library did not load. Check the internet connection and reload.</span>';return;}
+  const rd=new FileReader();
+  rd.onload=async e=>{
+    try{
+      if(!RESULT)throw new Error('Upload and process a timesheet before uploading the Gusto preview PDF.');
+      const fullText=await extractPdfText(e.target.result);
+      const parsed=parseGustoPreviewPdf(fullText);
+      GUSTO_PREVIEW=emptyGustoPreview();
+      GUSTO_PREVIEW.uploaded=true;GUSTO_PREVIEW.fileName=f.name;GUSTO_PREVIEW.period=parsed.period;GUSTO_PREVIEW.payDate=parsed.payDate;
+      GUSTO_PREVIEW.employees=parsed.employees;GUSTO_PREVIEW.totals=parsed.totals;GUSTO_PREVIEW.parsingWarnings=parsed.parsingWarnings;
+      // Layer/step 8 — payroll period must match before anything else is trusted.
+      if(!parsed.period||!RESULT.period.start||!RESULT.period.end){
+        GUSTO_PREVIEW.blockingIssues.push('Payroll period could not be confirmed from the timesheet and/or the PDF.');
+      }else if(parsed.period.start!==RESULT.period.start||parsed.period.end!==RESULT.period.end){
+        GUSTO_PREVIEW.blockingIssues.push(`WRONG PAYROLL PERIOD. Timesheet is ${RESULT.period.start} to ${RESULT.period.end}; Gusto preview is ${parsed.period.start} to ${parsed.period.end}. Do not run payroll.`);
+      }
+      if(GUSTO_PREVIEW.blockingIssues.length){
+        GUSTO_PREVIEW.status='BLOCKED';
+      }else{
+        // Layer 1 — PDF internal integrity.
+        const internalFails=previewInternalControlFailures();
+        const totalsFails=previewTotalsReconciliation();
+        if(internalFails.length||totalsFails.length){
+          GUSTO_PREVIEW.blockingIssues.push(...internalFails.map(x=>'PDF INTERNAL CONTROL FAILURE — '+x));
+          GUSTO_PREVIEW.blockingIssues.push(...totalsFails.map(x=>'PDF PARSING CONTROL FAILED — '+x));
+          GUSTO_PREVIEW.status='BLOCKED';
+        }else{
+          // Layers 2 & 3 — employee-level and payroll-total comparison.
+          const cmp=buildPreviewComparison();
+          GUSTO_PREVIEW.comparison=cmp;
+          const hasMismatch=cmp.rows.some(r=>r.status==='MISMATCH'||r.status==='UNEXPECTED GUSTO EMPLOYEE'||r.status==='MISSING FROM GUSTO');
+          const hasReview=cmp.rows.some(r=>r.status==='REVIEW REQUIRED');
+          GUSTO_PREVIEW.status=hasMismatch?'MISMATCH':hasReview?'REVIEW REQUIRED':'MATCHED';
+        }
+      }
+      document.getElementById('gustoPreviewStatus').textContent=`Loaded ${f.name}. ${GUSTO_PREVIEW.status}`;
+      renderAll();
+    }catch(err){
+      GUSTO_PREVIEW=emptyGustoPreview();GUSTO_PREVIEW.uploaded=true;GUSTO_PREVIEW.fileName=f.name;GUSTO_PREVIEW.status='BLOCKED';GUSTO_PREVIEW.blockingIssues=[err.message];
+      document.getElementById('gustoPreviewStatus').innerHTML='<span style="color:var(--bad)">'+esc(err.message)+'</span>';
+      renderAll();
+    }
+  };
+  rd.readAsArrayBuffer(f);
+}
+function clearGustoPreview(){GUSTO_PREVIEW=emptyGustoPreview();document.getElementById('gustoPreviewStatus').textContent='No Gusto preview PDF uploaded yet.';renderAll();}
+function renderGustoPreview(){
+  const sg=document.getElementById('previewStatGrid'),sum=document.getElementById('gustoPreviewSummary'),cmp=document.getElementById('gustoPreviewComparison');
+  if(!sg)return;
+  if(!GUSTO_PREVIEW.uploaded){sg.innerHTML='';sum.innerHTML='';cmp.innerHTML='';return;}
+  const rows=GUSTO_PREVIEW.comparison?.rows||[];
+  const exceptions=rows.filter(r=>r.status!=='MATCH').length;
+  const badge=s=>({MATCHED:'b-ok',BLOCKED:'b-bad',MISMATCH:'b-bad','REVIEW REQUIRED':'b-warn','NOT CHECKED':'b-warn'}[s]||'b-warn');
+  sg.innerHTML=[
+    ['Period',GUSTO_PREVIEW.period?`${GUSTO_PREVIEW.period.start} to ${GUSTO_PREVIEW.period.end}`:'—'],
+    ['Prepared Employees',RESULT?RESULT.payroll.employees.length:0],
+    ['Gusto Employees',GUSTO_PREVIEW.employees.size],
+    ['Exceptions',exceptions],
+    ['Overall',`<span class="badge ${badge(GUSTO_PREVIEW.status)}">${esc(GUSTO_PREVIEW.status)}</span>`]
+  ].map(([l,n])=>`<div class="stat"><div class="n">${n}</div><div class="l">${l}</div></div>`).join('');
+  let h='';
+  if(GUSTO_PREVIEW.blockingIssues.length)h+=`<div class="issue-bad"><b>Blocking</b><br>${GUSTO_PREVIEW.blockingIssues.map(esc).join('<br>')}</div>`;
+  if(GUSTO_PREVIEW.parsingWarnings.length)h+=`<div class="note"><b>Parsing warnings</b><br>${GUSTO_PREVIEW.parsingWarnings.map(esc).join('<br>')}</div>`;
+  sum.innerHTML=h;
+  cmp.innerHTML=rows.length?tableHtml(['Employee (Timesheet)','Employee (Gusto)','Reg Hrs T-Sheet','Reg Hrs Gusto','OT Hrs T-Sheet','OT Hrs Gusto','Rate T-Sheet','Rate Gusto','Reg Pay T-Sheet','Reg Pay Gusto','OT Pay T-Sheet','OT Pay Gusto','Additional','Gusto Gross','Status','Reason'],
+    rows.map(r=>[r.prepared,r.gusto,fmtH(r.prepRegH),fmtH(r.gRegH),fmtH(r.prepOTH),fmtH(r.gOTH),r.prepRate==null?'—':fmtM(r.prepRate),r.gRegRate==null?'—':fmtM(r.gRegRate),fmtM(r.prepRegPay),fmtM(r.gRegPay),fmtM(r.prepOTPay),fmtM(r.gOTPay),fmtM(r.additional),fmtM(r.gustoGross),r.status,r.reason||''])):
+    (GUSTO_PREVIEW.uploaded&&!GUSTO_PREVIEW.blockingIssues.length?'<div class="hint">No comparison rows yet.</div>':'');
+}
 function buildComparison(){const rows=[],used=new Set();for(const e of RESULT.payroll.employees){const target=aliasTarget(e.employeeName),g=GUSTO.employeeActual.get(normalizeName(target)),reasons=[];if(!g)reasons.push('PREPARED EMPLOYEE NOT FOUND IN GUSTO');else used.add(normalizeName(target));const pReg=e.regularPay??0,pOT=e.overtimePay??0,pD=e.doublePay??0,gReg=g?roundMoney(g.regular):null,gOT=g?roundMoney(g.ot):null,gD=g?roundMoney(g.double):null;if(g&&Math.abs(pReg-gReg)>0.01)reasons.push('REGULAR MISMATCH');if(g&&Math.abs(pOT-gOT)>0.01)reasons.push('OT MISMATCH');if(g&&Math.abs(pD-gD)>0.01)reasons.push('DOUBLE MISMATCH');rows.push({prepared:e.employeeName,gusto:target,pReg,gReg,pOT,gOT,pD,gD,regDiff:g?roundMoney(pReg-gReg):null,otDiff:g?roundMoney(pOT-gOT):null,doubleDiff:g?roundMoney(pD-gD):null,status:reasons.length?'MISMATCH':'MATCH',reason:reasons.join('; ')});}for(const [k,g] of GUSTO.employeeActual)if(!used.has(k))rows.push({prepared:'—',gusto:g.employeeName,pReg:null,gReg:roundMoney(g.regular),pOT:null,gOT:roundMoney(g.ot),pD:null,gD:roundMoney(g.double),status:'MISMATCH',reason:'GUSTO EMPLOYEE NOT FOUND IN PREPARED PAYROLL'});return {rows,passed:rows.length>0&&rows.every(r=>r.status==='MATCH')};}
 function parseWcSource(matrix){const out=[];for(let r=0;r<(matrix||[]).length;r++){const row=matrix[r]||[],code=safeNumber(row[4]),rate=safeNumber(row[10]);if(code!=null&&rate!=null)out.push({code:String(Math.trunc(code)),rate});}return out;}
 function parseHzRates(matrix){const out=[];for(let r=0;r<(matrix||[]).length;r++){const row=matrix[r]||[];for(let c=0;c<row.length;c++){const m=String(row[c]??'').match(/code\s*(\d{4})/i);if(m){let rate=null;for(let j=c-1;j>=0;j--){const n=safeNumber(row[j]);if(n!=null){rate=n;break;}}if(rate!=null)out.push({code:m[1],rate});}}}return out;}
@@ -1056,6 +1279,6 @@ function downloadCashWorkbook(){if(APPROVAL.status!=='APPROVED')return alert('Ap
 function downloadOTWorkbook(){if(APPROVAL.status!=='APPROVED')return alert('Approve payroll first.');const full=expectedOutputWorkbook(),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,full.Sheets['Overtime Calculation'],'Overtime Calculation');XLSX.writeFile(wb,`Overtime_${RESULT.period.start}_to_${RESULT.period.end}.xlsx`);}
 
 // Events
-const dz=document.getElementById('dropzone');['dragover','dragleave','drop'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();if(ev==='drop'&&e.dataTransfer.files[0])loadTimesheet(e.dataTransfer.files[0]);}));dz.addEventListener('click',e=>{if(!e.target.closest('label'))document.getElementById('fileInput').click();});document.getElementById('fileInput').addEventListener('change',e=>{if(e.target.files[0])loadTimesheet(e.target.files[0]);e.target.value='';});document.getElementById('rateFileInput').addEventListener('change',e=>{if(e.target.files[0])loadRateFile(e.target.files[0]);e.target.value='';});document.getElementById('gustoFileInput').addEventListener('change',e=>{if(e.target.files[0])loadGusto(e.target.files[0]);e.target.value='';});document.getElementById('biweeklyFileInput').addEventListener('change',e=>{if(e.target.files[0])loadBiweekly(e.target.files[0]);e.target.value='';});document.getElementById('employeeTaxFileInput').addEventListener('change',e=>{if(e.target.files[0])loadEmployeeTaxFile(e.target.files[0]);e.target.value='';});['payrollFrequency','payPeriodStart','payPeriodEnd','doubleMultiplier','weekendOT'].forEach(id=>document.getElementById(id).addEventListener('change',()=>{PAY_PERIOD_SOURCE='manual';invalidate();}));
-initPeriod();drawSetup();drawEmployeeTaxTable();if(typeof XLSX==='undefined'||typeof Papa==='undefined'){const e=document.getElementById('libError');e.style.display='block';e.textContent='Spreadsheet libraries could not load. Check the internet connection and reload.';}
+const dz=document.getElementById('dropzone');['dragover','dragleave','drop'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();if(ev==='drop'&&e.dataTransfer.files[0])loadTimesheet(e.dataTransfer.files[0]);}));dz.addEventListener('click',e=>{if(!e.target.closest('label'))document.getElementById('fileInput').click();});document.getElementById('fileInput').addEventListener('change',e=>{if(e.target.files[0])loadTimesheet(e.target.files[0]);e.target.value='';});document.getElementById('rateFileInput').addEventListener('change',e=>{if(e.target.files[0])loadRateFile(e.target.files[0]);e.target.value='';});document.getElementById('gustoFileInput').addEventListener('change',e=>{if(e.target.files[0])loadGusto(e.target.files[0]);e.target.value='';});document.getElementById('gustoPreviewInput').addEventListener('change',e=>{if(e.target.files[0])loadGustoPreview(e.target.files[0]);e.target.value='';});document.getElementById('biweeklyFileInput').addEventListener('change',e=>{if(e.target.files[0])loadBiweekly(e.target.files[0]);e.target.value='';});document.getElementById('employeeTaxFileInput').addEventListener('change',e=>{if(e.target.files[0])loadEmployeeTaxFile(e.target.files[0]);e.target.value='';});['payrollFrequency','payPeriodStart','payPeriodEnd','doubleMultiplier','weekendOT'].forEach(id=>document.getElementById(id).addEventListener('change',()=>{PAY_PERIOD_SOURCE='manual';invalidate();}));
+initPeriod();drawSetup();drawEmployeeTaxTable();renderGustoPreview();if(typeof XLSX==='undefined'||typeof Papa==='undefined'||typeof pdfjsLib==='undefined'){const e=document.getElementById('libError');e.style.display='block';e.textContent='Spreadsheet/PDF libraries could not load. Check the internet connection and reload.';}
 </script></body></html>
