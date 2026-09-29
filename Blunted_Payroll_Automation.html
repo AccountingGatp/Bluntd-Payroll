@@ -52,13 +52,13 @@
 </div>
 
 <div class="setup-section" style="margin-top:16px">
-  <h3>Employee Tax / Paycheck Detail</h3>
-  <div class="note">The Basic/Detailed general ledger contains total employee-side payroll tax, but it does not reliably identify the employee-level tax split. Final special reimbursement sheets therefore use employee tax only from an explicit paycheck/tax source or from the values entered below. No employee-tax amount is guessed or hardcoded.</div>
+  <h3>Gusto Paystubs — Employee Tax Detail</h3>
+  <div class="note">For special reimbursement calculations, Employee Tax means ONLY employee Social Security + employee Medicare from the Gusto paystub/earnings statement. Federal income tax, state income tax, CA SDI and all other taxes are excluded. The PDF parser reads these two Current amounts per employee; no tax amount is guessed or hardcoded.</div>
   <div class="row">
     <div><label>Import tax detail for</label><select id="taxImportScope"><option value="Weekly">Weekly</option><option value="Biweekly">Biweekly</option></select></div>
-    <div><label class="filebtn">Upload paycheck / employee-tax file<input type="file" id="employeeTaxFileInput" accept=".xlsx,.xls,.csv"></label></div>
+    <div><label class="filebtn">Upload Gusto paystubs / employee-tax file<input type="file" id="employeeTaxFileInput" accept=".pdf,.xlsx,.xls,.csv"></label></div>
   </div>
-  <div class="hint" id="employeeTaxStatus">Upload a file containing Employee/Name and Employee Tax/Taxes Withheld columns, or enter the required values below.</div>
+  <div class="hint" id="employeeTaxStatus">Preferred: upload the Gusto paystubs PDF. The app reads each employee's Current Social Security + Medicare only. XLSX/CSV remains supported as a fallback.</div>
   <div class="overflow" style="max-height:220px;margin-top:8px"><table id="employeeTaxTable"></table></div>
 </div>
 
@@ -144,18 +144,10 @@ function requiredEmployeeTaxRows(){
   return out;
 }
 function employeeTaxControl(scope){
-  const payroll=scope==='Weekly'?GUSTO:BIWEEKLY;
-  if(!payroll?.uploaded)return null;
-  const actual=scope==='Weekly'?GUSTO.actual:null;
-  if(scope==='Weekly'&&actual){
-    const total=roundMoney((Number(actual.debitTax)||0)-(Number(actual.employerTax)||0));
-    return Number.isFinite(total)?total:null;
-  }
-  // For biweekly, derive the employee-side payroll liability directly from Basic totals.
-  if(scope==='Biweekly'&&BIWEEKLY._actual){
-    const total=roundMoney((Number(BIWEEKLY._actual.debitTax)||0)-(Number(BIWEEKLY._actual.employerTax)||0));
-    return Number.isFinite(total)?total:null;
-  }
+  // Employee tax for this workflow must come directly from the employee paystub:
+  // Employee Social Security + Employee Medicare only.
+  // Do NOT use employer FICA/Medicare as an employee-tax control because employee-side
+  // and employer-side amounts can differ because of Gusto taxable-base / rounding adjustments.
   return null;
 }
 function drawEmployeeTaxTable(){
@@ -165,7 +157,7 @@ function drawEmployeeTaxTable(){
   for(const r of rows){
     const x=EMPLOYEE_TAX.get(employeeTaxKey(r.scope,r.name));
     const control=employeeTaxControl(r.scope);
-    h+=`<tr><td>${esc(r.scope)}</td><td>${esc(r.name)}</td><td><input type="number" min="0" step="0.01" style="width:140px" value="${x?x.amount:''}" onchange="setEmployeeTax('${r.scope}',this.dataset.name,this.value,'Manual')" data-name="${escAttr(r.name)}"></td><td>${esc(x?.source||'REQUIRED')}</td><td>${control==null?'—':fmtM(control)+' total employee-side tax in GL'}</td></tr>`;
+    h+=`<tr><td>${esc(r.scope)}</td><td>${esc(r.name)}</td><td><input type="number" min="0" step="0.01" style="width:140px" value="${x?x.amount:''}" onchange="setEmployeeTax('${r.scope}',this.dataset.name,this.value,'Manual SS + Medicare')" data-name="${escAttr(r.name)}"></td><td>${esc(x?.source||'REQUIRED')}</td><td>Paystub SS + Medicare only</td></tr>`;
   }
   if(!rows.length)h+='<tr><td colspan="5" class="small">Upload the weekly/biweekly GL first. Required special employees will appear here automatically.</td></tr>';
   t.innerHTML=h;
@@ -214,40 +206,135 @@ function extractTaxFromCompletedSpecialSheets(scope,matrices,employeeMap){
     }
   }
 }
-function loadEmployeeTaxFile(f){
+function parseGustoPaystubTaxRows(rows,targetMap,scope,label){
+  const imported=[];
+  const pageGroups=new Map();
+  for(const row of rows){
+    const p=row.page||1;
+    if(!pageGroups.has(p))pageGroups.set(p,[]);
+    pageGroups.get(p).push(row);
+  }
+
+  // Only employees required by the current weekly/biweekly post-payroll calculation
+  // are candidates. Match their real/alias names directly against the page text instead
+  // of depending on Gusto's title/SSN text order, which varies between PDF exports.
+  const required=requiredEmployeeTaxRows().filter(x=>x.scope===scope);
+  const candidates=[];
+  for(const req of required){
+    const actual=[...targetMap.values()].find(e=>normalizeName(e.employeeName)===normalizeName(req.name));
+    if(!actual)continue;
+    const names=[actual.employeeName,aliasTarget(actual.employeeName)].filter(Boolean);
+    candidates.push({actual,names:[...new Set(names.map(x=>String(x).trim()).filter(Boolean))]});
+  }
+
+  for(const [page,pageRows] of pageGroups){
+    const text=pageRows.map(r=>r.text).join(' ').replace(/\s+/g,' ').trim();
+
+    // Find the required employee whose name (or configured Gusto alias) appears on this page.
+    // Longest normalized name wins to avoid partial-name collisions.
+    let matched=null;
+    for(const c of candidates){
+      for(const nm of c.names){
+        const n=normalizeName(nm);
+        if(!n)continue;
+        const pageNorm=normalizeName(text);
+        if(pageNorm.includes(n)){
+          const score=n.length;
+          if(!matched||score>matched.score)matched={actual:c.actual,score};
+        }
+      }
+    }
+    if(!matched)continue;
+    const actual=matched.actual;
+
+    // Employee taxes are printed in the LEFT half of Gusto paystubs; Employer Tax is
+    // printed in the right half on the same visual rows. extractPdfRows() provides
+    // employeeTaxText using only x < 290 so employer amounts cannot be selected.
+    const taxStart=pageRows.findIndex(r=>/Employee Taxes Withheld/i.test(r.employeeTaxText||r.text));
+    const taxEnd=taxStart>=0?pageRows.findIndex((r,i)=>i>taxStart&&/Employee Deductions/i.test(r.employeeTaxText||r.text)):-1;
+    const taxRows=taxStart>=0?pageRows.slice(taxStart,taxEnd>taxStart?taxEnd:pageRows.length):pageRows;
+
+    let socialSecurity=null,medicare=null;
+    for(const tr of taxRows){
+      const rt=String(tr.employeeTaxText||tr.text||'').replace(/\s+/g,' ').trim();
+      if(socialSecurity==null&&/\bSocial Security\b/i.test(rt)){
+        const after=rt.slice(rt.search(/Social Security/i)+'Social Security'.length);
+        const m=after.match(/\$\s*([\d,]+(?:\.\d{1,2})?)/);
+        if(m)socialSecurity=safeNumber(m[1]);
+      }
+      if(medicare==null&&/\bMedicare\b/i.test(rt)){
+        const after=rt.slice(rt.search(/Medicare/i)+'Medicare'.length);
+        const m=after.match(/\$\s*([\d,]+(?:\.\d{1,2})?)/);
+        if(m)medicare=safeNumber(m[1]);
+      }
+      if(socialSecurity!=null&&medicare!=null)break;
+    }
+
+    if(socialSecurity==null||medicare==null)continue;
+    const tax=roundMoney(socialSecurity+medicare);
+    setEmployeeTax(scope,actual.employeeName,tax,`Gusto paystub PDF: SS ${fmtM(socialSecurity)} + Medicare ${fmtM(medicare)}`);
+    imported.push({employee:actual.employeeName,tax,socialSecurity,medicare,page});
+  }
+
+  if(!imported.length){
+    const wanted=required.map(x=>x.name).join(', ')||'no required employees';
+    throw new Error(`No required employee Social Security + Medicare values were found. Required for ${scope}: ${wanted}. Confirm the matching GL is uploaded first and this is the Gusto paystubs/earnings-statement PDF.`);
+  }
+  return imported;
+}
+async function loadEmployeeTaxFile(f){
   const scope=document.getElementById('taxImportScope')?.value||'Weekly';
   const status=document.getElementById('employeeTaxStatus');
+  status.textContent='Reading '+f.name+' ...';
+  const targetMap=scope==='Weekly'?GUSTO.employeeActual:BIWEEKLY.employeeActual;
+  if(!targetMap||!targetMap.size){status.textContent=`Upload the ${scope.toLowerCase()} GL first.`;return;}
+  const ext=f.name.split('.').pop().toLowerCase();
+  if(ext==='pdf'){
+    try{
+      const ab=await f.arrayBuffer();
+      const pdf=await pdfjsLib.getDocument({data:ab}).promise;
+      const rows=await extractPdfRows(pdf);
+      const imported=parseGustoPaystubTaxRows(rows,targetMap,scope,f.name);
+      const total=roundMoney(imported.reduce((a,x)=>a+x.tax,0));
+      status.textContent=`Imported ${imported.length} required employee tax value(s) from ${f.name}. Employee tax used = Social Security + Medicare only. Imported total: ${fmtM(total)}.`;
+      drawEmployeeTaxTable();syncButtons();
+    }catch(err){status.textContent='Unable to read Gusto paystubs PDF: '+err.message;}
+    return;
+  }
   const finish=(matrices,label)=>{
     let imported=0;
-    const targetMap=scope==='Weekly'?GUSTO.employeeActual:BIWEEKLY.employeeActual;
-    if(!targetMap||!targetMap.size)throw new Error(`Upload the ${scope.toLowerCase()} GL first.`);
     for(const [sheetName,matrix] of Object.entries(matrices)){
-      let hr=-1,ni=-1,ti=-1;
+      let hr=-1,ni=-1,ssi=-1,mi=-1,ti=-1;
       for(let r=0;r<Math.min(40,matrix.length);r++){
         const h=(matrix[r]||[]).map(normalizeHeader);
         ni=h.findIndex(x=>['employee','employee name','name','full name','worker'].includes(x));
+        ssi=h.findIndex(x=>['social security','employee social security','social security tax'].includes(x));
+        mi=h.findIndex(x=>['medicare','employee medicare','medicare tax'].includes(x));
         ti=h.findIndex(x=>['employee tax','employee taxes','employee taxes withheld','taxes withheld','tax withheld','total employee tax','total taxes withheld'].includes(x));
-        if(ni>=0&&ti>=0){hr=r;break;}
+        if(ni>=0&&ssi>=0&&mi>=0){hr=r;break;}
       }
       if(hr<0)continue;
       for(let r=hr+1;r<matrix.length;r++){
-        const name=String(matrix[r]?.[ni]??'').trim(),tax=safeNumber(matrix[r]?.[ti]);
-        if(!name||tax==null)continue;
+        const name=String(matrix[r]?.[ni]??'').trim();
+        if(!name)continue;
         const actual=[...targetMap.values()].find(e=>normalizeName(e.employeeName)===normalizeName(name)||normalizeName(aliasTarget(e.employeeName))===normalizeName(name));
         if(!actual)continue;
         const needed=requiredEmployeeTaxRows().some(x=>x.scope===scope&&normalizeName(x.name)===normalizeName(actual.employeeName));
         if(!needed)continue;
-        setEmployeeTax(scope,actual.employeeName,tax,`Imported: ${label}${sheetName?` / ${sheetName}`:''}`);
-        imported++;
+        let tax=null,source='';
+        const ss=safeNumber(matrix[r]?.[ssi]),med=safeNumber(matrix[r]?.[mi]);
+        if(ss==null||med==null)continue;
+        tax=roundMoney(ss+med);
+        source=`Imported SS + Medicare: ${label}${sheetName?` / ${sheetName}`:''}`;
+        setEmployeeTax(scope,actual.employeeName,tax,source);imported++;
       }
     }
-    if(!imported)throw new Error('No required employee-tax rows were found. Expected Employee/Name and Employee Tax/Taxes Withheld columns.');
+    if(!imported)throw new Error('No required employee-tax rows were found. Expected Employee/Name + Social Security + Medicare. Total-tax columns are not accepted because this workflow uses Social Security + Medicare only.');
     status.textContent=`Imported ${imported} required employee-tax value(s) for ${scope}.`;
   };
-  const ext=f.name.split('.').pop().toLowerCase();
   if(ext==='csv'){
     Papa.parse(f,{skipEmptyLines:false,complete:r=>{try{finish({'CSV':r.data},f.name)}catch(e){status.textContent=e.message;}}});
-  }else{
+  }else if(['xlsx','xls'].includes(ext)){
     const rd=new FileReader();
     rd.onload=e=>{try{
       const wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
@@ -255,7 +342,7 @@ function loadEmployeeTaxFile(f){
       finish(matrices,f.name);
     }catch(err){status.textContent='Unable to read employee-tax file: '+err.message;}};
     rd.readAsArrayBuffer(f);
-  }
+  }else status.textContent='Please upload PDF, XLSX, XLS or CSV.';
 }
 
 
@@ -428,12 +515,56 @@ function syncButtons(){
 }
 
 function parseLedger(matrix,sheetName){let hr=-1;for(let r=0;r<Math.min(matrix.length,50);r++){const h=(matrix[r]||[]).map(normalizeHeader);if(h.includes('account type')&&h.includes('account description')&&h.includes('debit')&&h.includes('credit')){hr=r;break;}}if(hr<0)return {error:'Ledger header not found',rows:[]};const hdr=matrix[hr].map(normalizeHeader),idx={};hdr.forEach((h,i)=>idx[h]=i);const rows=[];for(let r=hr+1;r<matrix.length;r++){const v=matrix[r]||[],type=String(v[idx['account type']]??'').trim(),desc=String(v[idx['account description']]??'').trim();if(!type&&normalizeHeader(desc)==='totals')break;if(!type&&!desc)continue;rows.push({sourceRow:r+1,type,desc,debit:safeNumber(v[idx.debit]),credit:safeNumber(v[idx.credit])});}return {sheetName,rows};}
-function wageEmployee(desc){const m=String(desc).match(/(?:Regular|Overtime|Double[- ]?Time|Sick Time Off) Wages? for (.+)$/i)||String(desc).match(/Sick Time Off for (.+)$/i);return m?m[1].trim():null;}
-function parsePayrollActual(basic,detailed){const b=basic?.rows||[],d=detailed?.rows||[],nt=r=>normalizeHeader(r.type),sum=(rows,pred,side='debit')=>roundMoney(rows.filter(pred).reduce((a,r)=>a+(Number(r[side])||0),0));const actual={regularWages:sum(b,r=>nt(r)==='regularwages'),overtimeWages:sum(b,r=>nt(r)==='overtimewages'),doubleWages:sum(b,r=>/double/.test(nt(r))&&/wage/.test(nt(r))),sickTime:sum(b,r=>nt(r)==='sicktimeoff'),employerTax:sum(b,r=>nt(r)==='employerficatax'||nt(r)==='employermedicaretax'),netPay:sum(b,r=>nt(r)==='debitnetpay','credit'),debitTax:sum(b,r=>nt(r)==='debittax','credit'),employeeChecks:sum(b,r=>nt(r)==='employeepaymentcheck','credit'),deductions:sum(b,r=>nt(r)==='garnishment','credit'),totalDebit:roundMoney(b.reduce((a,r)=>a+(Number(r.debit)||0),0)),totalCredit:roundMoney(b.reduce((a,r)=>a+(Number(r.credit)||0),0))};actual.balanced=Math.abs(actual.totalDebit-actual.totalCredit)<=0.01;const em=new Map(),order=[];for(const r of d){const t=nt(r);if(['regularwages','overtimewages','sicktimeoff'].includes(t)||/double/.test(t)){const name=wageEmployee(r.desc);if(!name)continue;const k=normalizeName(name);if(!em.has(k)){em.set(k,{employeeName:name,regular:0,ot:0,double:0,sick:0,employerTax:null});order.push(k);}const e=em.get(k);if(t==='regularwages')e.regular+=Number(r.debit)||0;else if(t==='overtimewages')e.ot+=Number(r.debit)||0;else if(t==='sicktimeoff')e.sick+=Number(r.debit)||0;else e.double+=Number(r.debit)||0;}}const fica=d.filter(r=>nt(r)==='employerficatax'),medi=d.filter(r=>nt(r)==='employermedicaretax'),valid=order.length>0&&fica.length===order.length&&medi.length===order.length;if(valid)order.forEach((k,i)=>em.get(k).employerTax=roundMoney((Number(fica[i].debit)||0)+(Number(medi[i].debit)||0)));return {actual,employeeMap:em,order,taxValid:valid,taxMessage:`Employees ${order.length}; FICA rows ${fica.length}; Medicare rows ${medi.length}. ${valid?'Employer tax matched by employee order across FICA and Medicare blocks.':'Employer tax cannot be safely assigned by employee.'}`};}
+function wageEmployee(desc){const m=String(desc).match(/(?:Regular|Overtime|Double[- ]?Time|Sick Time Off) Wages? for (.+)$/i)||String(desc).match(/Sick Time Off for (.+)$/i)||String(desc).match(/Additional Earnings for (.+)$/i);return m?m[1].trim():null;}
+function parsePayrollActual(basic,detailed){
+  const b=basic?.rows||[],d=detailed?.rows||[],nt=r=>normalizeHeader(r.type),
+    sum=(rows,pred,side='debit')=>roundMoney(rows.filter(pred).reduce((a,r)=>a+(Number(r[side])||0),0));
+  const actual={
+    regularWages:sum(b,r=>nt(r)==='regularwages'),
+    overtimeWages:sum(b,r=>nt(r)==='overtimewages'),
+    doubleWages:sum(b,r=>/double/.test(nt(r))&&/wage/.test(nt(r))),
+    sickTime:sum(b,r=>nt(r)==='sicktimeoff'),
+    additionalEarnings:sum(b,r=>nt(r)==='nonequityearning'||/additional earning/.test(normalizeHeader(r.desc))),
+    employerTax:sum(b,r=>nt(r)==='employerficatax'||nt(r)==='employermedicaretax'),
+    netPay:sum(b,r=>nt(r)==='debitnetpay','credit'),
+    debitTax:sum(b,r=>nt(r)==='debittax','credit'),
+    employeeChecks:sum(b,r=>nt(r)==='employeepaymentcheck','credit'),
+    deductions:sum(b,r=>nt(r)==='garnishment','credit'),
+    totalDebit:roundMoney(b.reduce((a,r)=>a+(Number(r.debit)||0),0)),
+    totalCredit:roundMoney(b.reduce((a,r)=>a+(Number(r.credit)||0),0))
+  };
+  actual.balanced=Math.abs(actual.totalDebit-actual.totalCredit)<=0.01;
+  const em=new Map(),order=[];
+  for(const r of d){
+    const t=nt(r);
+    if(['regularwages','overtimewages','sicktimeoff','nonequityearning'].includes(t)||/double/.test(t)){
+      const name=wageEmployee(r.desc);
+      if(!name)continue;
+      const k=normalizeName(name);
+      if(!em.has(k)){
+        em.set(k,{employeeName:name,regular:0,ot:0,double:0,sick:0,additional:0,employerTax:null});
+        order.push(k);
+      }
+      const e=em.get(k);
+      if(t==='regularwages')e.regular+=Number(r.debit)||0;
+      else if(t==='overtimewages')e.ot+=Number(r.debit)||0;
+      else if(t==='sicktimeoff')e.sick+=Number(r.debit)||0;
+      else if(t==='nonequityearning')e.additional+=Number(r.debit)||0;
+      else e.double+=Number(r.debit)||0;
+    }
+  }
+  const fica=d.filter(r=>nt(r)==='employerficatax'),medi=d.filter(r=>nt(r)==='employermedicaretax'),
+    valid=order.length>0&&fica.length===order.length&&medi.length===order.length;
+  if(valid)order.forEach((k,i)=>em.get(k).employerTax=roundMoney((Number(fica[i].debit)||0)+(Number(medi[i].debit)||0)));
+  return {
+    actual,employeeMap:em,order,taxValid:valid,
+    taxMessage:`Employees ${order.length}; FICA rows ${fica.length}; Medicare rows ${medi.length}. ${valid?'Employer tax matched by employee order across FICA and Medicare blocks.':'Employer tax cannot be safely assigned by employee.'}`
+  };
+}
 function buildComparison(){const rows=[],used=new Set();for(const e of RESULT.payroll.employees){const target=aliasTarget(e.employeeName),g=GUSTO.employeeActual.get(normalizeName(target)),reasons=[];if(!g)reasons.push('PREPARED EMPLOYEE NOT FOUND IN GUSTO');else used.add(normalizeName(target));const pReg=e.regularPay??0,pOT=e.overtimePay??0,pD=e.doublePay??0,gReg=g?roundMoney(g.regular):null,gOT=g?roundMoney(g.ot):null,gD=g?roundMoney(g.double):null;if(g&&Math.abs(pReg-gReg)>0.01)reasons.push('REGULAR MISMATCH');if(g&&Math.abs(pOT-gOT)>0.01)reasons.push('OT MISMATCH');if(g&&Math.abs(pD-gD)>0.01)reasons.push('DOUBLE MISMATCH');rows.push({prepared:e.employeeName,gusto:target,pReg,gReg,pOT,gOT,pD,gD,regDiff:g?roundMoney(pReg-gReg):null,otDiff:g?roundMoney(pOT-gOT):null,doubleDiff:g?roundMoney(pD-gD):null,status:reasons.length?'MISMATCH':'MATCH',reason:reasons.join('; ')});}for(const [k,g] of GUSTO.employeeActual)if(!used.has(k))rows.push({prepared:'—',gusto:g.employeeName,pReg:null,gReg:roundMoney(g.regular),pOT:null,gOT:roundMoney(g.ot),pD:null,gD:roundMoney(g.double),status:'MISMATCH',reason:'GUSTO EMPLOYEE NOT FOUND IN PREPARED PAYROLL'});return {rows,passed:rows.length>0&&rows.every(r=>r.status==='MATCH')};}
 function parseWcSource(matrix){const out=[];for(let r=0;r<(matrix||[]).length;r++){const row=matrix[r]||[],code=safeNumber(row[4]),rate=safeNumber(row[10]);if(code!=null&&rate!=null)out.push({code:String(Math.trunc(code)),rate});}return out;}
 function parseHzRates(matrix){const out=[];for(let r=0;r<(matrix||[]).length;r++){const row=matrix[r]||[];for(let c=0;c<row.length;c++){const m=String(row[c]??'').match(/code\s*(\d{4})/i);if(m){let rate=null;for(let j=c-1;j>=0;j--){const n=safeNumber(row[j]);if(n!=null){rate=n;break;}}if(rate!=null)out.push({code:m[1],rate});}}}return out;}
-function buildWcAndSpecial(){const employeeRows=[],groups=new Map(),warnings=[];for(const [k,e] of GUSTO.employeeActual){const code=WC_EMPLOYEE_MAP[k];if(!code){warnings.push(`WC code not mapped for ${e.employeeName}`);continue;}const rate=wcRate(code),reg=e.regular+e.sick,ot=e.ot+e.double,otBasis=ot*2/3,basis=reg+otBasis,wc=rate==null?null:basis*rate;employeeRows.push({name:e.employeeName,code,regular:reg,ot,otBasis,basis,rate,wc});if(!groups.has(code))groups.set(code,{code,regular:0,ot:0,otBasis:0,basis:0,rate,wc:0});const g=groups.get(code);g.regular+=reg;g.ot+=ot;g.otBasis+=otBasis;g.basis+=basis;g.wc+=wc||0;}const sourceWc=new Map((GUSTO.sourceWc||[]).map(x=>[x.code,x.rate])),hz=new Map(parseHzRates(GUSTO.hzMatrix).map(x=>[x.code,x.rate]));const validation=[...new Set([...wcRateRows.map(x=>String(x.code)),...sourceWc.keys(),...hz.keys()])].sort().map(code=>{const cfg=wcRate(code),w=sourceWc.get(code)??null,h=hz.get(code)??null;const conflict=w!=null&&h!=null&&Math.abs(w-h)>1e-12,diff=cfg!=null&&((w!=null&&Math.abs(cfg-w)>1e-12)||(h!=null&&Math.abs(cfg-h)>1e-12));return {code,configured:cfg,wc:w,hz:h,status:conflict?'SOURCE CONFLICT — REVIEW':diff?'CONFIGURATION DIFFERS — REVIEW':'OK'};});const special=[];for(const [k,e] of GUSTO.employeeActual){const rule=SPECIAL_RULES[k];if(!rule)continue;const rate=wcRate(rule.wcCode),wages=e.regular+e.ot+e.double+e.sick,exempt=(e.ot+e.double)/3,otAfter=(e.ot+e.double)-exempt,basis=e.regular+e.sick+otAfter,wc=rate==null?null:basis*rate,tax=GUSTO.taxAssignmentValid?e.employerTax:null,subtotal=tax==null||wc==null?null:wages+tax+wc,fee=subtotal==null?null:subtotal*rule.feePct/100,total=subtotal==null?null:subtotal+fee,allocations=rule.allocations.map(([label,pct])=>({label,pct,total:total==null?null:total*pct/100}));special.push({employee:e.employeeName,...rule,wages,employerTax:tax,exempt,otAfter,basis,wcRate:rate,wc,subtotal,fee,total,allocations});}return {employeeRows,groups:Array.from(groups.values()),validation,special,warnings};}
+function buildWcAndSpecial(){const employeeRows=[],groups=new Map(),warnings=[];for(const [k,e] of GUSTO.employeeActual){const code=WC_EMPLOYEE_MAP[k];if(!code){warnings.push(`WC code not mapped for ${e.employeeName}`);continue;}const rate=wcRate(code),reg=e.regular+e.sick+e.additional,ot=e.ot+e.double,otBasis=ot*2/3,basis=reg+otBasis,wc=rate==null?null:basis*rate;employeeRows.push({name:e.employeeName,code,regular:reg,ot,otBasis,basis,rate,wc});if(!groups.has(code))groups.set(code,{code,regular:0,ot:0,otBasis:0,basis:0,rate,wc:0});const g=groups.get(code);g.regular+=reg;g.ot+=ot;g.otBasis+=otBasis;g.basis+=basis;g.wc+=wc||0;}const sourceWc=new Map((GUSTO.sourceWc||[]).map(x=>[x.code,x.rate])),hz=new Map(parseHzRates(GUSTO.hzMatrix).map(x=>[x.code,x.rate]));const validation=[...new Set([...wcRateRows.map(x=>String(x.code)),...sourceWc.keys(),...hz.keys()])].sort().map(code=>{const cfg=wcRate(code),w=sourceWc.get(code)??null,h=hz.get(code)??null;const conflict=w!=null&&h!=null&&Math.abs(w-h)>1e-12,diff=cfg!=null&&((w!=null&&Math.abs(cfg-w)>1e-12)||(h!=null&&Math.abs(cfg-h)>1e-12));return {code,configured:cfg,wc:w,hz:h,status:conflict?'SOURCE CONFLICT — REVIEW':diff?'CONFIGURATION DIFFERS — REVIEW':'OK'};});const special=[];for(const [k,e] of GUSTO.employeeActual){const rule=SPECIAL_RULES[k];if(!rule)continue;const rate=wcRate(rule.wcCode),wages=e.regular+e.ot+e.double+e.sick+e.additional,exempt=(e.ot+e.double)/3,otAfter=(e.ot+e.double)-exempt,basis=e.regular+e.sick+e.additional+otAfter,wc=rate==null?null:basis*rate,tax=GUSTO.taxAssignmentValid?e.employerTax:null,subtotal=tax==null||wc==null?null:wages+tax+wc,fee=subtotal==null?null:subtotal*rule.feePct/100,total=subtotal==null?null:subtotal+fee,allocations=rule.allocations.map(([label,pct])=>({label,pct,total:total==null?null:total*pct/100}));special.push({employee:e.employeeName,...rule,wages,employerTax:tax,exempt,otAfter,basis,wcRate:rate,wc,subtotal,fee,total,allocations});}return {employeeRows,groups:Array.from(groups.values()),validation,special,warnings};}
 
 function previewApprox(a,b,t=0.02){return a!=null&&b!=null&&Math.abs(Number(a)-Number(b))<=t;}
 // Groups pdf.js text items into visual rows using their y-position, then reconstructs each row's
@@ -449,14 +580,22 @@ async function extractPdfRows(pdf){
     items.sort((a,b)=>b.y-a.y||a.x-b.x);
     let current=null,rowY=null;
     for(const it of items){
-      if(current===null||Math.abs(it.y-rowY)>2){current={items:[]};rows.push(current);rowY=it.y;}
+      if(current===null||Math.abs(it.y-rowY)>2){current={items:[],page:p};rows.push(current);rowY=it.y;}
       current.items.push(it);
     }
   }
   return rows.map(r=>{
     const sorted=r.items.slice().sort((a,b)=>a.x-b.x);
     const leftItems=sorted.filter(i=>i.x<88); // Employee Info column only; Employment Type starts at x≈89.4
-    return {text:sorted.map(i=>i.str).join(' '),leftText:leftItems.map(i=>i.str).join(' ').trim()};
+    // In Gusto paystubs the employee-side tax table occupies the left half of the page
+    // (Employer Tax begins around x≈301). Keep x<290 as a safe employee-only slice.
+    const employeeTaxItems=sorted.filter(i=>i.x<290);
+    return {
+      text:sorted.map(i=>i.str).join(' '),
+      leftText:leftItems.map(i=>i.str).join(' ').trim(),
+      employeeTaxText:employeeTaxItems.map(i=>i.str).join(' ').trim(),
+      page:r.page||1
+    };
   });
 }
 // Walks the reconstructed rows top-to-bottom, using the leftmost (Employee Info) column to detect
@@ -816,6 +955,44 @@ function expectedOutputWorkbook(){
   return wb;
 }
 
+function appendBasicPostPayrollControl(ws,actual){
+  if(!ws||!actual)return;
+  const ref=XLSX.utils.decode_range(ws['!ref']||'A1:D1');
+  const start=ref.e.r+3; // one blank row, then the post-payroll control
+  const wageDebit=roundMoney(
+    Number(actual.regularWages||0)+Number(actual.overtimeWages||0)+
+    Number(actual.doubleWages||0)+Number(actual.sickTime||0)+Number(actual.additionalEarnings||0)
+  );
+  const wagesLessChecks=roundMoney(wageDebit-Number(actual.employeeChecks||0));
+  const employerTax=roundMoney(Number(actual.employerTax||0));
+  const employeeSideTax=roundMoney(Number(actual.debitTax||0)-employerTax);
+  const netPay=roundMoney(Number(actual.netPay||0));
+  const debitTax=roundMoney(Number(actual.debitTax||0));
+  const deductions=roundMoney(Number(actual.deductions||0));
+  const debitControl=roundMoney(wagesLessChecks+employerTax+employeeSideTax);
+  const creditControl=roundMoney(employeeSideTax+netPay+debitTax+deductions);
+  const diff=roundMoney(debitControl-creditControl);
+  const aoa=[
+    ['','',wagesLessChecks,'',''],
+    ['','',employerTax,'',''],
+    ['','',employeeSideTax,'',''],
+    ['','','',employeeSideTax,''],
+    ['','','',netPay,''],
+    ['','','',debitTax,''],
+    ['','','','',''],
+    ['','','',deductions,''],
+    ['','','','',''],
+    ['','',debitControl,creditControl,diff]
+  ];
+  XLSX.utils.sheet_add_aoa(ws,aoa,{origin:{r:start-1,c:0}});
+  for(let r=start;r<=start+9;r++){
+    for(const c of ['C','D','E']){
+      const cell=ws[`${c}${r}`];
+      if(cell&&typeof cell.v==='number')cell.z='$#,##0.00';
+    }
+  }
+  if(Math.abs(diff)>0.01)throw new Error(`Basic post-payroll control does not balance. Debit ${fmtM(debitControl)} vs credit ${fmtM(creditControl)}.`);
+}
 function copySourceSheetToWorkbook(sourceWb,targetWb,name){
   if(!sourceWb||!sourceWb.Sheets||!sourceWb.Sheets[name])return false;
   // Source Basic/Detailed sheets are preserved as uploaded, including formulas/styles supported by xlsx-js-style.
@@ -983,7 +1160,7 @@ function combinedWcEmployeeMap(){
       if(!code)continue;
       rows.push({
         key:k,name:e.employeeName,source,code,
-        regular:Number(e.regular||0)+Number(e.sick||0),
+        regular:Number(e.regular||0)+Number(e.sick||0)+Number(e.additional||0),
         overtime:Number(e.ot||0)+Number(e.double||0)
       });
     }
@@ -997,6 +1174,7 @@ function updatedWeeklyGustoWorkbook(){
   const wb=XLSX.utils.book_new();
   if(!copySourceSheetToWorkbook(GUSTO.sourceWorkbook,wb,'Basic')||!copySourceSheetToWorkbook(GUSTO.sourceWorkbook,wb,'Detailed'))
     throw new Error('The weekly Gusto file must contain Basic and Detailed sheets.');
+  appendBasicPostPayrollControl(wb.Sheets['Basic'],GUSTO.actual);
 
   // IMPORTANT: All calculated output amounts below are computed from uploaded GL rows + configured master rules.
   // No test payroll amounts are embedded in the export and no Excel formulas are required for these calculations.
@@ -1010,6 +1188,7 @@ function updatedWeeklyGustoWorkbook(){
       if(Number(e.ot||0))sourceRows.push({key:k,type:'OvertimeWages',desc:`Overtime Wages for ${e.employeeName}`,amount:Number(e.ot||0)});
       if(Number(e.double||0))sourceRows.push({key:k,type:'DoubleTimeWages',desc:`Double-Time Wages for ${e.employeeName}`,amount:Number(e.double||0)});
       if(Number(e.sick||0))sourceRows.push({key:k,type:'SickTimeOff',desc:`Sick Time Off for ${e.employeeName}`,amount:Number(e.sick||0)});
+      if(Number(e.additional||0))sourceRows.push({key:k,type:'NonEquityEarning',desc:`Additional Earnings for ${e.employeeName}`,amount:Number(e.additional||0)});
     }
   };
   addSourceRows(GUSTO.employeeActual);
@@ -1022,7 +1201,7 @@ function updatedWeeklyGustoWorkbook(){
     if(!code)continue;
     if(!groupMap.has(code))groupMap.set(code,{regular:0,ot:0});
     const g=groupMap.get(code);
-    if(r.type==='RegularWages'||r.type==='SickTimeOff')g.regular+=r.amount;
+    if(r.type==='RegularWages'||r.type==='SickTimeOff'||r.type==='NonEquityEarning')g.regular+=r.amount;
     else g.ot+=r.amount;
   }
 
@@ -1058,7 +1237,7 @@ function updatedWeeklyGustoWorkbook(){
     const e=GUSTO.employeeActual.get(key)||{employeeName:fallbackName,regular:0,ot:0,double:0,sick:0,employerTax:0};
     const name=e.employeeName||fallbackName;
     const first=name.split(' ')[0];
-    const regular=Number(e.regular||0)+Number(e.sick||0);
+    const regular=Number(e.regular||0)+Number(e.sick||0)+Number(e.additional||0);
     const ot=Number(e.ot||0)+Number(e.double||0);
     const rate=Number(wcRate(rule.wcCode)||0);
     const tax=GUSTO.taxAssignmentValid?Number(e.employerTax||0):0;
@@ -1127,7 +1306,7 @@ function updatedWeeklyGustoWorkbook(){
   if(paulEntry){
     const [key,rule]=paulEntry;
     const e=GUSTO.employeeActual.get(key)||{employeeName:key.replace(/\b\w/g,x=>x.toUpperCase()),regular:0,ot:0,double:0,sick:0,employerTax:0};
-    const regular=Number(e.regular||0)+Number(e.sick||0);
+    const regular=Number(e.regular||0)+Number(e.sick||0)+Number(e.additional||0);
     const ot=Number(e.ot||0)+Number(e.double||0);
     const rate=Number(wcRate(rule.wcCode)||0);
     const tax=GUSTO.taxAssignmentValid?Number(e.employerTax||0):0;
