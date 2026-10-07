@@ -1,0 +1,1859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blunted Payroll Automation</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<style>
+:root{--bg:#f5f4f0;--panel:#fff;--ink:#1c231f;--dim:#5b6560;--line:#dcdcd3;--accent:#2f5d4c;--accent-ink:#fff;--ok:#2f7d54;--ok-bg:#e5f3ea;--bad:#a13c2b;--bad-bg:#fbe9e4;--warn:#8a6d1f;--warn-bg:#f7efdb;--mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace}
+@media(prefers-color-scheme:dark){:root{--bg:#141815;--panel:#1c2119;--ink:#eae7de;--dim:#9aa39a;--line:#33392f;--accent:#7fbfa0;--accent-ink:#0e1310;--ok:#7fd1a0;--ok-bg:#173324;--bad:#e0806a;--bad-bg:#3a201a;--warn:#e0c165;--warn-bg:#3a2f14}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:ui-sans-serif,system-ui,Segoe UI,Arial;line-height:1.45}.wrap{max-width:1180px;margin:0 auto;padding:28px 18px 90px}h1{font-family:Georgia,serif;font-size:1.7rem;margin:0 0 2px}.sub{color:var(--dim);font-size:.9rem;margin:0 0 18px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:20px 22px;margin-bottom:16px}.workflow-card{border-left:4px solid var(--accent)}.prod-banner{background:var(--ok-bg);border:1px solid var(--ok);padding:12px 14px;border-radius:8px;margin-bottom:16px;font-size:.84rem}.prod-banner strong{display:block;margin-bottom:2px}.quick-flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:14px 0 18px}.flow-step{border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--panel)}.flow-step .num{width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:var(--accent);color:var(--accent-ink);font-weight:700}.flow-step strong{display:block;margin-top:6px;font-size:.86rem}.flow-step span{display:block;color:var(--dim);font-size:.75rem;margin-top:2px}.step-label{font-size:.72rem;color:var(--dim);margin-bottom:4px}.row,.actions{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}.actions{margin-top:12px}label{display:block;font-size:.76rem;color:var(--dim);margin-bottom:4px}input,select,textarea{font-family:var(--mono);font-size:.83rem;padding:7px 9px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--ink)}input[type=text],input[type=number],input[type=date]{width:180px}select{min-width:150px}textarea{width:100%;min-height:70px}button,.filebtn{font-size:.84rem;padding:9px 14px;border-radius:4px;cursor:pointer;border:1px solid var(--line);background:transparent;color:var(--ink);font-family:inherit}button.primary,.filebtn{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}button:disabled{opacity:.5;cursor:not-allowed}.filebtn input{display:none}#dropzone{border:1px dashed var(--line);border-radius:7px;padding:26px;text-align:center;color:var(--dim);cursor:pointer}.hint,.small{font-size:.78rem;color:var(--dim)}.hint{margin-top:7px}.note{background:var(--warn-bg);color:var(--warn);border-radius:5px;padding:10px 14px;font-size:.83rem;margin:10px 0}.issue-bad{background:var(--bad-bg);color:var(--bad);padding:10px 14px;border-radius:5px;margin-bottom:12px;cursor:pointer}.issue-ok{background:var(--ok-bg);color:var(--ok);padding:10px 14px;border-radius:5px;margin-bottom:12px}.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));border:1px solid var(--line);border-radius:6px;overflow:hidden}.stat{padding:12px 13px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)}.stat .n{font-family:var(--mono);font-size:1.15rem;font-weight:600}.stat .l{font-size:.7rem;color:var(--dim);margin-top:2px}.tabs{display:flex;gap:3px;flex-wrap:wrap;border-bottom:1px solid var(--line);margin:16px 0 14px}.tab{padding:8px 11px;font-size:.8rem;cursor:pointer;border-bottom:2px solid transparent;color:var(--dim)}.tab.active{color:var(--ink);border-bottom-color:var(--accent);font-weight:650}.overflow{max-height:520px;overflow:auto;border:1px solid var(--line);border-radius:5px}table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:.78rem}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}th{font-family:ui-sans-serif,system-ui;font-size:.69rem;color:var(--dim);font-weight:600;position:sticky;top:0;background:var(--panel);z-index:1}.tot-row td{font-weight:700;border-top:2px solid var(--line)}.problem td{color:var(--bad)}.excluded{color:var(--dim)}.badge{display:inline-block;font-size:.7rem;padding:2px 7px;border-radius:10px;font-weight:700}.b-ok{background:var(--ok-bg);color:var(--ok)}.b-bad{background:var(--bad-bg);color:var(--bad)}.b-warn{background:var(--warn-bg);color:var(--warn)}.config-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}.config-card{border:1px solid var(--line);border-radius:6px;padding:12px}.ready-box{border:1px solid var(--line);border-radius:6px;padding:12px 14px;margin-top:12px}.approval-ok{border-color:var(--ok);background:var(--ok-bg)}details.setup-box{border:1px solid var(--line);border-radius:7px;padding:12px 14px;margin-top:14px}details.setup-box>summary{cursor:pointer;font-weight:700}.setup-section{margin-top:14px}.employee-card{border:1px solid var(--line);border-radius:5px;margin:7px 0}.employee-card summary{cursor:pointer;padding:9px 11px;font-weight:600}.employee-body{padding:0 11px 11px}.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:800px){.two-col{grid-template-columns:1fr}}
+
+/* ===== top menu + Gusto Only tab ===== */
+.topbar{position:sticky;top:0;z-index:60;background:var(--panel);border-bottom:1px solid var(--line);box-shadow:0 1px 0 rgba(0,0,0,.03)}
+.topbar-in{max-width:1180px;margin:0 auto;padding:0 18px;display:flex;align-items:stretch;gap:6px;flex-wrap:wrap}
+.brand{font-family:Georgia,serif;font-weight:700;font-size:1.02rem;padding:14px 18px 14px 0;margin-right:8px;border-right:1px solid var(--line);display:flex;align-items:center}
+.navtab{appearance:none;border:0;border-bottom:3px solid transparent;background:none;border-radius:0;padding:10px 14px 9px;cursor:pointer;color:var(--dim);text-align:left;font-family:inherit;font-size:.92rem;line-height:1.25}
+.navtab small{display:block;font-size:.72rem;font-weight:400;color:var(--dim);margin-top:1px}
+.navtab:hover{background:var(--bg)}
+.navtab.active{color:var(--ink);border-bottom-color:var(--accent);font-weight:650}
+.navtab:focus-visible,.go-drop:focus-within,button:focus-visible,.go-chk:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+#tab-gusto{max-width:820px}
+.go-switch{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 0 18px}
+.go-sw{position:relative;text-align:left;border:2px solid var(--line);border-radius:12px;padding:14px 16px;background:var(--panel);cursor:pointer;font-family:inherit;color:var(--ink);line-height:1.3}
+.go-sw b{display:block;font-size:1.05rem}.go-sw small{display:block;color:var(--dim);font-size:.78rem;margin-top:2px}
+.go-sw:hover{border-color:var(--accent)}
+.go-sw.active{border-color:var(--accent);background:var(--ok-bg);box-shadow:0 0 0 1px var(--accent) inset}
+.go-sw-ok{position:absolute;top:12px;right:14px;font-size:.72rem;font-weight:700;color:var(--ok)}
+@media(max-width:600px){.go-switch{grid-template-columns:1fr}}
+.go-num{width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:var(--accent);color:var(--accent-ink);font-weight:700;font-size:.9rem;flex:none}
+.go-step{border-left:4px solid var(--line)}
+.go-step.done{border-left-color:var(--ok)}.go-step.bad{border-left-color:var(--bad)}.go-step.current{border-left-color:var(--accent)}
+.go-head{display:flex;gap:12px;align-items:flex-start;margin-bottom:12px}
+.go-head h2{margin:0 0 2px;font-size:1.08rem}
+.go-head .badge{margin-left:auto;white-space:nowrap}
+.go-drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border:2px dashed var(--line);border-radius:10px;padding:20px 14px;text-align:center;cursor:pointer;color:var(--dim);font-size:.86rem;margin:0;background:var(--bg);transition:border-color .12s,background .12s}
+.go-drop b{color:var(--ink);font-size:.95rem}
+.go-drop:hover,.go-drop.drag{border-color:var(--accent);background:var(--panel)}
+.go-drop.is-disabled{opacity:.5;cursor:not-allowed}
+.go-drop.is-disabled:hover{border-color:var(--line);background:var(--bg)}
+.go-status{margin-top:8px;font-size:.8rem}
+.go-status.bad{color:var(--bad)}.go-status.ok{color:var(--ok)}
+.go-msg{margin-top:12px}
+.go-chips{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-top:12px}
+.go-chip{border:1px solid var(--line);border-radius:7px;padding:9px 11px;background:var(--bg)}
+.go-chip .l{font-size:.68rem;color:var(--dim);text-transform:uppercase;letter-spacing:.03em}
+.go-chip .v{font-family:var(--mono);font-size:.92rem;font-weight:600;margin-top:2px}
+.go-chip.ok .v{color:var(--ok)}.go-chip.bad .v{color:var(--bad)}.go-chip.warn .v{color:var(--warn)}
+.go-err{background:var(--bad-bg);color:var(--bad);border-radius:6px;padding:11px 14px;font-size:.84rem}
+.go-info{background:var(--ok-bg);color:var(--ok);border-radius:6px;padding:10px 14px;font-size:.84rem}
+.go-info button{margin:6px 0 0;display:block}
+.go-addon{border:2px dashed var(--line);border-radius:10px;padding:14px 16px;margin-bottom:16px;background:var(--panel)}
+.go-chk{display:flex;gap:10px;align-items:flex-start;cursor:pointer;margin:0;font-size:.9rem;color:var(--ink)}
+.go-chk input{width:18px;height:18px;margin-top:2px;accent-color:var(--accent);flex:none}
+#goAddonBody{margin-top:12px}
+.go-checks{list-style:none;margin:0 0 4px;padding:0}
+.go-checks li{display:flex;gap:9px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--line);font-size:.86rem}
+.go-checks li:last-child{border-bottom:0}
+.go-checks .ic{width:20px;height:20px;border-radius:50%;flex:none;display:inline-flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;margin-top:1px}
+.go-checks .ok .ic{background:var(--ok);color:var(--accent-ink)}.go-checks .bad .ic{background:var(--bad);color:#fff}.go-checks .warn .ic{background:var(--warn);color:#fff}.go-checks .todo .ic{border:2px solid var(--line);color:var(--dim)}
+.go-dlbtn{width:100%;margin-top:14px;padding:14px;font-size:1rem;font-weight:650}
+.go-why{font-size:.8rem;margin-top:8px;color:var(--dim)}.go-why.bad{color:var(--bad)}
+details.go-det{border:1px solid var(--line);border-radius:7px;padding:9px 12px;margin-top:10px}
+details.go-det>summary{cursor:pointer;font-weight:650;font-size:.86rem}
+.go-pv{margin-top:8px}.go-pv h4{margin:12px 0 4px;font-size:.8rem;color:var(--dim)}
+.go-tax input{width:110px}
+.go-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+</head>
+<body>
+<header class="topbar"><div class="topbar-in" role="tablist" aria-label="Main menu">
+  <div class="brand">Blunted Payroll</div>
+  <button class="navtab active" role="tab" aria-selected="true" data-tab="main">Full Payroll<small>Timesheet → Gusto → workbooks</small></button>
+  <button class="navtab" role="tab" aria-selected="false" data-tab="gusto">Gusto Only<small>Already paid in Gusto · no timesheet</small></button>
+</div></header>
+<div class="wrap" id="tab-main">
+<h1>Blunted Payroll Timesheet Automation</h1>
+<!-- Production Final: validated against the supplied 2026-08-24 through 2026-08-30 timesheet, updated hourly-rate file, weekly GL and approved workbook. -->
+<p class="sub">Production workflow: QBO timesheet → split Payroll / RSC cash → daily OT → approval → Gusto reconciliation → final workbook.</p>
+<div class="prod-banner"><strong>Production rule set</strong>Job Code 1 controls treatment. Lunch is unpaid. Rest breaks are paid and allocated to the related work stream. RSC is cash-only. Mixed RSC employees are split rather than excluded. Weekday OT starts after 8 hours; double time starts after 12. Payroll work on Saturday/Sunday is treated as overtime. Expected-output controls: Gusto Hours exclude Lunch and RSC; payroll-employee RSC is separated; CASH employees include RSC + paid Rest; job summary excludes Lunch; overtime is calculated daily.</div>
+<div id="libError" class="note" style="display:none;background:var(--bad-bg);color:var(--bad)"></div>
+<div class="quick-flow"><div class="flow-step"><div class="num">1</div><strong>Upload timesheet</strong><span>QBO CSV/XLSX + correct pay period.</span></div><div class="flow-step"><div class="num">2</div><strong>Review calculation</strong><span>Payroll, cash, rest and OT are separated automatically.</span></div><div class="flow-step"><div class="num">3</div><strong>Approve</strong><span>Blocking issues must be resolved first.</span></div><div class="flow-step"><div class="num">4</div><strong>Confirm payroll</strong><span>Upload regular Gusto GL; biweekly GL is optional.</span></div><div class="flow-step"><div class="num">5</div><strong>Download</strong><span>Expected-format payroll, audit, RSC and OT workbooks.</span></div></div>
+
+<div class="panel workflow-card"><div class="step-label">STEP 1</div><h2>Upload QBO Timesheet</h2>
+<div id="dropzone">Drop the QBO CSV / XLSX export here, or <label class="filebtn" style="display:inline-block">Choose file<input type="file" id="fileInput" accept=".csv,.xlsx,.xls"></label></div><div class="hint" id="fileStatus">No file uploaded yet.</div>
+<div class="row" style="margin-top:12px"><div><label>Payroll frequency</label><select id="payrollFrequency"><option value="Weekly">Weekly</option><option value="Biweekly">Biweekly</option></select></div><div><label>Pay period start</label><input type="date" id="payPeriodStart"></div><div><label>Pay period end</label><input type="date" id="payPeriodEnd"></div></div><div class="hint" id="payPeriodHint"></div></div>
+
+<div id="results" style="display:none"><div class="panel workflow-card"><div class="step-label">STEP 2</div><h2>Review Results</h2><div id="issueBanner"></div><div class="stats" id="statGrid"></div><div class="actions"><button onclick="toggleSetup()">Edit rules, employees &amp; rates</button><button onclick="process()">Reprocess</button></div>
+<details class="setup-box" id="setupBox"><summary>Production setup</summary>
+<div class="setup-section"><h3>Hourly Rates</h3><div class="actions"><label class="filebtn">Upload updated rate file<input type="file" id="rateFileInput" accept=".xlsx,.xls,.csv"></label><button onclick="restoreDefaultRates()">Restore supplied rate master</button></div><div class="hint" id="rateFileStatus">Embedded default comes from the supplied updated hourly-rate workbook. Only Full Name, Pay Rate and Notes are used.</div><div class="overflow" style="max-height:260px;margin-top:8px"><table id="rateTable"></table></div></div>
+<div class="setup-section"><h3>Employee Master</h3><div class="hint">PAYROLL = normal payroll but RSC rows still go to cash. CASH = all paid work routes to cash. AUTO follows job rules. REVIEW blocks payroll until the employee is classified. EXCLUDE removes the employee from payable outputs.</div><div class="actions"><button onclick="addEmployeeRow()">+ Add employee</button></div><div class="overflow" style="max-height:260px"><table id="employeeTable"></table></div></div>
+<div class="setup-section"><h3>Job Code 1 Rules</h3><div class="hint">Job Code 2 and Job Code 3 are retained for audit only and are not used to determine pay treatment.</div><div class="actions"><button onclick="addJobRule()">+ Add rule</button></div><div class="overflow" style="max-height:240px"><table id="jobRuleTable"></table></div></div>
+<div class="setup-section"><h3>Fixed Pay Exceptions</h3><div class="hint">Optional. If configured and the employee stays within the stated hour threshold, the fixed amount replaces Regular/OT/Double wage calculation.</div><div class="actions"><button onclick="addFixedRule()">+ Add fixed-pay rule</button></div><div class="overflow" style="max-height:220px"><table id="fixedTable"></table></div></div>
+<div class="setup-section"><div class="config-grid"><div class="config-card"><label>Double-time multiplier</label><input type="number" id="doubleMultiplier" value="2" step="0.01" min="0"></div><div class="config-card"><label><input type="checkbox" id="weekendOT" checked style="width:auto"> Treat Saturday/Sunday payroll work as OT</label><div class="small">RSC cash hours remain cash and are not converted to weekend OT.</div></div></div></div>
+<div class="setup-section"><h3>Post-Payroll Masters</h3><div class="two-col"><div><div class="small"><b>Name aliases</b></div><div class="overflow" style="max-height:180px"><table id="aliasTable"></table></div></div><div><div class="small"><b>WC rates</b></div><div class="overflow" style="max-height:180px"><table id="wcTable"></table></div></div></div></div>
+</details>
+<div class="tabs" id="tabBar"></div><div id="tabContent"></div></div>
+
+<div class="panel workflow-card" id="previewPanel"><div class="step-label">STEP 3</div><h2>Gusto Payroll Preview Check</h2><label class="filebtn">Upload Gusto Preview PDF<input type="file" id="gustoPreviewInput" accept=".pdf"></label><div class="hint" id="gustoPreviewStatus">Upload the Gusto payroll preview before approving payroll.</div><div id="gustoPreviewSummary"></div><div id="gustoPreviewComparison"></div><div class="actions" style="margin-top:10px"><button class="primary" id="downloadPreviewReviewBtn" onclick="downloadGustoPreviewReview()" disabled>Download Preview Review</button></div></div>
+<div class="panel workflow-card" id="approvalPanel"><div class="step-label">STEP 3</div><h2>Approve Payroll</h2><div class="stats" id="approvalStats"></div><div id="approvalReview" style="margin-top:12px"></div><div class="actions"><button class="primary" id="approveBtn" onclick="approvePayroll()">Approve for Gusto</button><button onclick="sendBack()">Send back</button></div><div class="ready-box" id="approvalBox"><strong>NOT REVIEWED</strong></div></div>
+
+<div class="panel workflow-card"><div class="step-label">STEP 4</div><h2>Confirm with Payroll GL</h2>
+<div class="hint" style="margin:0 0 10px">Only need the Gusto workbooks (no timesheet)? <a href="#gusto" onclick="switchTab('gusto');return false">Use the “Gusto Only” tab</a>.</div>
+<div class="two-col">
+  <div><h3>Regular Gusto General Report — Same Period Only</h3>
+    <label class="filebtn" id="gustoUploadLabel">Upload regular payroll GL<input type="file" id="gustoFileInput" accept=".xlsx,.xls" disabled></label>
+    <div class="hint" id="gustoStatus">Approval required before upload. Weekly timesheet accepts only the same 7-day GL; biweekly timesheet accepts only the same 14-day GL.</div>
+  </div>
+  <div><h3>Biweekly / Fixed Payroll GL — 14 Days Only</h3>
+    <label class="filebtn" id="biweeklyUploadLabel">Upload biweekly payroll GL<input type="file" id="biweeklyFileInput" accept=".xlsx,.xls" disabled></label>
+    <div class="hint" id="biweeklyStatus">Used only for the separate Meaghan/Ryan 14-day cycle. It must be a 14-day GL and align to the selected payroll-cycle end date.</div>
+  </div>
+</div>
+
+<div class="setup-section" style="margin-top:16px">
+  <h3>Gusto Paystubs — Employee Tax Detail</h3>
+  <div class="note">For special reimbursement calculations, Employee Tax means the TOTAL employee taxes withheld shown on the Gusto paystub/earnings statement (Summary → Taxes, Current): Social Security + Medicare + federal/state income tax + CA SDI as applicable. The PDF parser reads this Current amount per employee and checks it against the itemised tax lines; no tax amount is guessed or hardcoded.</div>
+  <div class="row">
+    <div><label>Import tax detail for</label><select id="taxImportScope"><option value="Weekly">Weekly</option><option value="Biweekly">Biweekly</option></select></div>
+    <div><label class="filebtn">Upload Gusto paystubs / employee-tax file<input type="file" id="employeeTaxFileInput" accept=".pdf,.xlsx,.xls,.csv"></label></div>
+  </div>
+  <div class="hint" id="employeeTaxStatus">Preferred: upload the Gusto paystubs PDF. The app reads each employee's Current total employee taxes (Summary → Taxes). XLSX/CSV remains supported as a fallback (needs an Employee and a total employee-tax column).</div>
+  <div class="overflow" style="max-height:220px;margin-top:8px"><table id="employeeTaxTable"></table></div>
+</div>
+
+<div class="stats" id="gustoStats" style="margin-top:12px"></div><div id="gustoBox" style="margin-top:12px"></div></div>
+
+<div class="panel workflow-card"><div class="step-label">STEP 5</div><h2>Download</h2>
+<div class="actions">
+<button class="primary" id="downloadBtn" onclick="downloadWorkbook()" disabled>Download Client Payroll Workbook</button>
+<button id="weeklyGustoDownloadBtn" onclick="downloadUpdatedWeeklyGusto()" disabled>Download Updated Weekly Gusto Workbook</button>
+<button id="biweeklyGustoDownloadBtn" onclick="downloadUpdatedBiweeklyGusto()" disabled>Download Updated Biweekly Gusto Workbook</button>
+<button id="auditBtn" onclick="downloadAuditWorkbook()" disabled>Download Audit Workbook</button>
+<button id="cashBtn" onclick="downloadCashWorkbook()" disabled>Download RSC Cash</button>
+<button id="otBtn" onclick="downloadOTWorkbook()" disabled>Download OT Report</button>
+</div>
+<div class="hint" id="downloadHint">Downloads unlock after approval. Weekly Gusto output appears after the regular GL is uploaded; biweekly output appears after the 14-day GL is uploaded.</div>
+</div></div>
+</div>
+<div class="wrap" id="tab-gusto" style="display:none">
+<h1>Gusto Only</h1>
+<p class="sub">Already paid in Gusto? Choose the payroll, upload its Gusto files, download the workbook. No timesheet needed.</p>
+
+<div class="go-switch" role="tablist" aria-label="Which payroll?">
+  <button class="go-sw active" role="tab" aria-selected="true" data-kind="weekly"><b>Weekly payroll</b><small>Every week · 7-day GL</small><span class="go-sw-ok" id="goSwW"></span></button>
+  <button class="go-sw" role="tab" aria-selected="false" data-kind="biweekly"><b>Biweekly payroll</b><small>Meaghan &amp; Ryan · 14-day GL</small><span class="go-sw-ok" id="goSwB"></span></button>
+</div>
+
+<!-- ============ WEEKLY ============ -->
+<section id="goW">
+  <div class="panel go-step" id="goS1">
+    <div class="go-head"><span class="go-num">1</span><div><h2>Upload the weekly GL</h2><div class="hint" style="margin:0">Gusto General Ledger export (.xlsx) for the 7-day pay period.</div></div><span class="badge" id="goB1"></span></div>
+    <label class="go-drop" id="goDrop1"><input type="file" class="sr" id="goGlW" accept=".xlsx,.xls"><b>Choose the weekly GL</b><span>or drag and drop it here</span></label>
+    <div class="go-msg" id="goMsg1"></div>
+  </div>
+
+  <div class="panel go-step" id="goS2">
+    <div class="go-head"><span class="go-num">2</span><div><h2>Upload the weekly paystubs</h2><div class="hint" style="margin:0">Gusto paystubs PDF for the same week (not the Payroll Journal report).</div></div><span class="badge" id="goB2"></span></div>
+    <label class="go-drop is-disabled" id="goDrop2"><input type="file" class="sr" id="goTaxW" accept=".pdf,.xlsx,.xls,.csv" disabled><b>Choose the weekly paystubs PDF</b><span id="goDrop2Sub">Upload the weekly GL first</span></label>
+    <div class="hint go-status" id="goTaxWStatus"></div>
+    <div class="go-msg" id="goMsg2"></div>
+  </div>
+
+  <div class="go-addon" id="goAddon">
+    <label class="go-chk"><input type="checkbox" id="goBiChk" onchange="goIncludeBi(this.checked)"> <span><b>This is also a biweekly week</b> — count Meaghan &amp; Ryan in the weekly WC sheet</span></label>
+    <div id="goAddonHint"></div>
+    <div id="goAddonBody" style="display:none">
+      <label class="go-drop" id="goDropWb"><input type="file" class="sr" id="goGlBw" accept=".xlsx,.xls"><b>Choose the 14-day GL</b><span>only used for the WC sheet — no paystubs needed here</span></label>
+      <div id="goAddonMsg"></div>
+    </div>
+  </div>
+
+  <div class="panel go-step" id="goS4W">
+    <div class="go-head"><span class="go-num">3</span><div><h2>Download the weekly workbook</h2><div class="hint" style="margin:0">Basic + Detailed, WC, Hz &amp; El, Paul.</div></div><span class="badge" id="goB4W"></span></div>
+    <ul class="go-checks" id="goChecksW"></ul>
+    <button class="primary go-dlbtn" id="goDlW" disabled onclick="downloadUpdatedWeeklyGusto()">Download weekly workbook</button>
+    <div class="go-why" id="goWhyW"></div>
+    <div id="goPreviewW"></div>
+    <div class="go-foot"><span class="hint" style="margin:0">Files are processed in your browser — nothing is uploaded.</span><button onclick="goStartOver('weekly')">Start over</button></div>
+  </div>
+</section>
+
+<!-- ============ BIWEEKLY ============ -->
+<section id="goBw" style="display:none">
+  <div class="panel go-step" id="goS3">
+    <div class="go-head"><span class="go-num">1</span><div><h2>Upload the biweekly GL</h2><div class="hint" style="margin:0">Gusto General Ledger export (.xlsx) for the 14-day cycle.</div></div><span class="badge" id="goB3"></span></div>
+    <label class="go-drop" id="goDrop3"><input type="file" class="sr" id="goGlB" accept=".xlsx,.xls"><b>Choose the biweekly GL</b><span>or drag and drop it here</span></label>
+    <div class="go-msg" id="goMsg3"></div>
+  </div>
+
+  <div class="panel go-step" id="goS3b">
+    <div class="go-head"><span class="go-num">2</span><div><h2>Upload the biweekly paystubs</h2><div class="hint" style="margin:0">Gusto paystubs PDF for the same 14-day cycle (not the Payroll Journal report).</div></div><span class="badge" id="goB3b"></span></div>
+    <label class="go-drop is-disabled" id="goDrop4"><input type="file" class="sr" id="goTaxB" accept=".pdf,.xlsx,.xls,.csv" disabled><b>Choose the biweekly paystubs PDF</b><span id="goDrop4Sub">Upload the biweekly GL first</span></label>
+    <div class="hint go-status" id="goTaxBStatus"></div>
+    <div class="go-msg" id="goMsg4"></div>
+  </div>
+
+  <div class="panel go-step" id="goS4B">
+    <div class="go-head"><span class="go-num">3</span><div><h2>Download the biweekly workbook</h2><div class="hint" style="margin:0">Basic + Detailed, Meaghan &amp; Ryan.</div></div><span class="badge" id="goB4B"></span></div>
+    <ul class="go-checks" id="goChecksB"></ul>
+    <button class="primary go-dlbtn" id="goDlB" disabled onclick="downloadUpdatedBiweeklyGusto()">Download biweekly workbook</button>
+    <div class="go-why" id="goWhyB"></div>
+    <div id="goPreviewB"></div>
+    <div class="go-foot"><span class="hint" style="margin:0">Files are processed in your browser — nothing is uploaded.</span><button onclick="goStartOver('biweekly')">Start over</button></div>
+  </div>
+</section>
+</div>
+<script>
+const EMBEDDED_RATES=[{"name":"Adrian Rodriguez","rate":17.87,"notes":""},{"name":"Diana Meza","rate":17.78,"notes":""},{"name":"Adriana Lopez","rate":18.0,"notes":""},{"name":"Alexander Torres","rate":17.87,"notes":""},{"name":"Angie Hernandez","rate":17.87,"notes":""},{"name":"Anielka Cano","rate":17.87,"notes":"Increased to@17.28 on 01/03/2025"},{"name":"Arlin Sepulveda","rate":17.87,"notes":""},{"name":"Blanca Mendoza","rate":17.87,"notes":""},{"name":"Carlos Silva","rate":30.0,"notes":"Increased to@30 on 01/03/2025"},{"name":"Crystal Aguilar","rate":17.87,"notes":""},{"name":"Daniel Valle","rate":17.87,"notes":""},{"name":"Deborah Duarte","rate":17.87,"notes":""},{"name":"Dina Ceto","rate":17.87,"notes":""},{"name":"Emily Hernandez","rate":17.87,"notes":""},{"name":"Emmanuel Martinez","rate":17.87,"notes":""},{"name":"Frank Saucedo","rate":17.87,"notes":""},{"name":"Geidi Lopez","rate":17.87,"notes":""},{"name":"Genesis Lopez","rate":20.0,"notes":"Increased from 09/10/2026"},{"name":"Hazel","rate":19.0,"notes":"Old one"},{"name":"Irene Herrera","rate":17.87,"notes":""},{"name":"Iris Ruiz","rate":17.87,"notes":""},{"name":"Jasmine Solis","rate":17.87,"notes":""},{"name":"Jennifer Hernandez","rate":17.87,"notes":""},{"name":"Jesus Alaniz","rate":19.0,"notes":""},{"name":"Jonathon Ramirez","rate":17.87,"notes":""},{"name":"Jorge Hernandez","rate":17.87,"notes":""},{"name":"Joselyn Raymundo","rate":17.87,"notes":""},{"name":"Juan Salgado","rate":17.87,"notes":""},{"name":"Karla Bonilla","rate":17.87,"notes":""},{"name":"Katy Gonzalez","rate":17.87,"notes":""},{"name":"Larry Raymond","rate":25.0,"notes":""},{"name":"Leah Lovos","rate":17.87,"notes":""},{"name":"Leticia Valdez","rate":19.0,"notes":""},{"name":"Lucia Lopez","rate":17.87,"notes":""},{"name":"Marco Garcia","rate":17.87,"notes":""},{"name":"Natalie Cardona","rate":17.75,"notes":""},{"name":"Nicolas Andrade","rate":17.87,"notes":""},{"name":"Nubia Cruz","rate":17.87,"notes":""},{"name":"Eddy Lopez","rate":17.78,"notes":""},{"name":"Justin Lopez","rate":17.78,"notes":""},{"name":"Lissette Mejia","rate":17.78,"notes":""},{"name":"Tracy pea","rate":17.78,"notes":""},{"name":"winston Sanchez","rate":17.78,"notes":""},{"name":"Paola Sanchez","rate":20.0,"notes":"Increased to $20 on 07/28/2025"},{"name":"Paul Bates","rate":22.5,"notes":"Increased from 09/10/2026"},{"name":"Rommel Hernandez","rate":17.87,"notes":""},{"name":"Rosa Santini","rate":17.87,"notes":""},{"name":"Sandra Martinez","rate":17.87,"notes":""},{"name":"Sergio Urbina","rate":17.87,"notes":""},{"name":"Silvia Zelaya","rate":17.87,"notes":""},{"name":"Valery Moreno","rate":21.0,"notes":"Increased to $21 on 01/03/2025"},{"name":"Velinda Ordonez","rate":17.87,"notes":""},{"name":"Vilma Cruz","rate":17.87,"notes":""},{"name":"Yohana Rivas","rate":17.87,"notes":"Increased to $17.80 on 01/03/2025"},{"name":"Yvette Chavez","rate":17.87,"notes":""},{"name":"Yvette Oropeza","rate":17.87,"notes":""},{"name":"Zaira Castaneda","rate":17.87,"notes":""},{"name":"Aishley Mendoza","rate":17.87,"notes":""},{"name":"Alba Espinoza","rate":17.87,"notes":""},{"name":"Gloria Cajina","rate":17.87,"notes":""},{"name":"Gloria Espinoza","rate":17.87,"notes":""},{"name":"Adriana Rivera","rate":17.87,"notes":""},{"name":"Hazel Herrera","rate":25.0,"notes":""},{"name":"Gringel Gonzalez","rate":17.87,"notes":""},{"name":"Tamas Pazsicky","rate":17.87,"notes":""},{"name":"Paola Rodriguez","rate":17.87,"notes":""},{"name":"Julie Garcia","rate":17.87,"notes":""},{"name":"Azucena Gomez","rate":17.87,"notes":""},{"name":"Elysia Castro","rate":20.0,"notes":""},{"name":"Alejandro Armenta","rate":17.87,"notes":""},{"name":"Sylvia Lopez","rate":20.0,"notes":"Increased from 09/10/2026"},{"name":"Bryan Centeno","rate":17.78,"notes":""},{"name":"Scarlette Chacon","rate":17.78,"notes":""},{"name":"Azucena Zuceth","rate":20.0,"notes":""},{"name":"German Jimenez","rate":17.78,"notes":""}];
+const HISTORICAL_RATES=[
+  {name:'Genesis Lopez',rate:19.00,until:'2026-09-09',source:'Approved 08/24/2026-08/30/2026 payroll workbook'},
+  {name:'Paul Bates',rate:21.00,until:'2026-09-09',source:'Approved 08/24/2026-08/30/2026 payroll workbook'},
+  {name:'Sylvia Lopez',rate:19.87,until:'2026-09-09',source:'Approved 08/24/2026-08/30/2026 payroll workbook'}
+];
+let rateRows=EMBEDDED_RATES.map(x=>({...x}));
+let employeeRows=[
+  {name:'Carlos Silva',mode:'PAYROLL'},{name:'Genesis Lopez',mode:'PAYROLL'},{name:'Hazel Herrera',mode:'PAYROLL'},{name:'Paola Sanchez',mode:'PAYROLL'},{name:'Paul Bates',mode:'PAYROLL'},{name:'Sylvia Lopez',mode:'PAYROLL'},
+  {name:'Eddy Lopez',mode:'CASH'},{name:'German Jimenez',mode:'CASH'},{name:'winston Sanchez',mode:'CASH'},{name:'Diana Meza',mode:'CASH'}
+];
+let jobRuleRows=[{code:'RSC',category:'CASH'},{code:'Lunch break',category:'EXCLUDE'},{code:'Rest break',category:'REST'},{code:'Bluntd Cones',category:'PAYROLL'},{code:'Crysp',category:'PAYROLL'},{code:'Clubhouse Drops',category:'PAYROLL'}];
+let fixedRows=[];
+let aliasRows=[{source:'Genesis Lopez',target:'Genesis Lopez Pagoada'}];
+let wcRateRows=[{code:'4611',rate:0.041133,notes:'Other than below mentioned'},{code:'8810',rate:0.004996,notes:'Carlos + Ryan'},{code:'8871',rate:0.00244,notes:'Meaghan+Elysia'}];
+const WC_EMPLOYEE_MAP={'carlos silva':'8810','paola sanchez':'4611','genesis lopez pagoada':'4611','genesis lopez':'4611','paul bates':'4611','hazel herrera':'4611','sylvia lopez':'4611','ryan o’hagan':'8810','ryan o\'hagan':'8810','meaghan manghera':'8871','elysia castro':'8871'};
+const SPECIAL_RULES={
+  'paul bates':{rule:'PAUL_ALLOCATION',wcCode:'4611',feePct:10,allocations:[['LXP',35],['Bravura',35]]},
+  'hazel herrera':{rule:'HZ_EL',wcCode:'4611',feePct:0,allocations:[]},
+  'elysia castro':{rule:'HZ_EL',wcCode:'8871',feePct:10,allocations:[]}
+};
+const BIWEEKLY_RULES={
+  'meaghan manghera':{wcCode:'8871',feePct:10,allocations:[['LXP',70],['Bravura',30]]},
+  'ryan o’hagan':{wcCode:'8810',feePct:10,allocations:[['Bravura',50]]},
+  'ryan o\'hagan':{wcCode:'8810',feePct:10,allocations:[['Bravura',50]]}
+};
+const REQUIRED=['fname','lname','local_date','local_day','local_start_time','local_end_time','tz','hours','jobcode_1','jobcode_2','jobcode_3','location'];
+const TABS=['Summary','Employee Payroll','Daily Calculation','Data','Overtime Calculation','RSC + Rest','Rest Breaks','Job Codes','Hourly Rates','Review','Post-Payroll Reconciliation','Biweekly Allocations'];
+let RAW_ROWS=null,RESULT=null,activeTab='Summary',PAY_PERIOD_SOURCE='',APPROVAL={status:'NOT REVIEWED',timestamp:''},GUSTO=emptyGusto(),BIWEEKLY=emptyBiweekly(),GUSTO_PREVIEW=emptyGustoPreview();
+function emptyGustoPreview(){return {uploaded:false,fileName:'',period:null,employees:new Map(),totals:{},comparison:null,status:'NOT CHECKED',warnings:[],blockingIssues:[],reviewNotes:new Map()};}
+
+let CUR_TAB='main',GO_INCL_BI=false,GO_VIEW='weekly';const TAB_SLOTS={};
+function standalone(){return CUR_TAB==='gusto';}
+let EMPLOYEE_TAX = new Map(); // key = "Weekly|normalized name" or "Biweekly|normalized name"; value = {amount,source}
+function employeeTaxKey(scope,name){return `${scope}|${normalizeName(name)}`;}
+function setEmployeeTax(scope,name,amount,source='Manual'){
+  const n=safeNumber(amount);
+  const key=employeeTaxKey(scope,name);
+  if(n==null||n<0)EMPLOYEE_TAX.delete(key);
+  else EMPLOYEE_TAX.set(key,{amount:n,source});
+  drawEmployeeTaxTable();
+  syncButtons();
+}
+function getEmployeeTax(scope,name){
+  const x=EMPLOYEE_TAX.get(employeeTaxKey(scope,name));
+  return x&&Number.isFinite(Number(x.amount))?Number(x.amount):null;
+}
+function clearEmployeeTaxScope(scope){
+  for(const k of Array.from(EMPLOYEE_TAX.keys()))if(k.startsWith(scope+'|'))EMPLOYEE_TAX.delete(k);
+}
+function requiredEmployeeTaxRows(){
+  const out=[];
+  if(GUSTO.uploaded){
+    for(const [k,rule] of Object.entries(SPECIAL_RULES)){
+      if(rule.rule!=='PAUL_ALLOCATION')continue;
+      const e=GUSTO.employeeActual.get(k);
+      if(e)out.push({scope:'Weekly',name:e.employeeName,reason:'Paul/special reimbursement employee tax'});
+    }
+  }
+  if(BIWEEKLY.uploaded){
+    for(const k of Object.keys(BIWEEKLY_RULES)){
+      const e=BIWEEKLY.employeeActual.get(k);
+      if(e&&!out.some(x=>x.scope==='Biweekly'&&normalizeName(x.name)===k))
+        out.push({scope:'Biweekly',name:e.employeeName,reason:'Biweekly reimbursement employee tax'});
+    }
+  }
+  return out;
+}
+function employeeTaxControl(scope){
+  // Employee tax for this workflow = total employee taxes withheld on the paystub (Summary -> Taxes).
+  // Biweekly control: GL employee-side tax (Debit tax - employer FICA/Medicare) must equal the sum of the
+  // imported paystub totals when the biweekly GL contains only the required special employees.
+  if(scope!=='Biweekly'||!BIWEEKLY.uploaded||!BIWEEKLY._actual)return null;
+  // Only valid when every employee in the biweekly GL is one of the required special employees.
+  const req=requiredEmployeeTaxRows().filter(r=>r.scope==='Biweekly').length;
+  if(!req||BIWEEKLY.employeeActual.size!==req)return null;
+  return roundMoney(Number(BIWEEKLY._actual.debitTax||0)-Number(BIWEEKLY._actual.employerTax||0));
+}
+function drawEmployeeTaxTable(){
+  const t=document.getElementById('employeeTaxTable');if(!t)return;
+  const rows=requiredEmployeeTaxRows();
+  let h='<tr><th>Payroll</th><th>Employee</th><th>Employee Tax</th><th>Source</th><th>Control</th></tr>';
+  for(const r of rows){
+    const x=EMPLOYEE_TAX.get(employeeTaxKey(r.scope,r.name));
+    const control=employeeTaxControl(r.scope);
+    h+=`<tr><td>${esc(r.scope)}</td><td>${esc(r.name)}</td><td><input type="number" min="0" step="0.01" style="width:140px" value="${x?x.amount:''}" onchange="setEmployeeTax('${r.scope}',this.dataset.name,this.value,'Manual total employee tax')" data-name="${escAttr(r.name)}"></td><td>${esc(x?.source||'REQUIRED')}</td><td>Paystub total employee taxes${control==null?'':' — GL control '+fmtM(control)}</td></tr>`;
+  }
+  if(!rows.length)h+='<tr><td colspan="5" class="small">Upload the weekly/biweekly GL first. Required special employees will appear here automatically.</td></tr>';
+  t.innerHTML=h;
+  if(standalone())renderGustoOnly();
+}
+function validateRequiredEmployeeTaxes(scope){
+  const missing=requiredEmployeeTaxRows().filter(r=>r.scope===scope&&getEmployeeTax(scope,r.name)==null);
+  return {ok:missing.length===0,missing};
+}
+function extractTaxFromCompletedSpecialSheets(scope,matrices,employeeMap){
+  if(scope==='Weekly'){
+    const n=Object.keys(matrices).find(x=>normalizeHeader(x)==='paul');
+    if(n){
+      const m=matrices[n]||[];
+      for(const row of m){
+        if(normalizeHeader(row?.[0])==='employee tax'){
+          const v=safeNumber(row?.[1]);
+          if(v!=null){
+            const target=[...employeeMap.values()].find(e=>SPECIAL_RULES[normalizeName(e.employeeName)]?.rule==='PAUL_ALLOCATION');
+            if(target)setEmployeeTax('Weekly',target.employeeName,v,`Imported from ${n} sheet`);
+          }
+        }
+      }
+    }
+  }else{
+    const n=Object.keys(matrices).find(x=>normalizeHeader(x)==='meaghan ryan');
+    if(n){
+      const m=matrices[n]||[];
+      const header=m[0]||[];
+      for(let r=1;r<m.length;r++){
+        const row=m[r]||[];
+        if(normalizeHeader(row[0])==='employee tax'){
+          const first=String(header[0]||'').trim(),v=safeNumber(row[1]);
+          if(v!=null){
+            const e=[...employeeMap.values()].find(x=>normalizeName(x.employeeName).startsWith(normalizeName(first)));
+            if(e)setEmployeeTax('Biweekly',e.employeeName,v,`Imported from ${n} sheet`);
+          }
+        }
+        if(normalizeHeader(row[5])==='employee tax'){
+          const first=String(header[5]||'').trim(),v=safeNumber(row[6]);
+          if(v!=null){
+            const e=[...employeeMap.values()].find(x=>normalizeName(x.employeeName).startsWith(normalizeName(first)));
+            if(e)setEmployeeTax('Biweekly',e.employeeName,v,`Imported from ${n} sheet`);
+          }
+        }
+      }
+    }
+  }
+}
+function parseGustoPaystubTaxRows(rows,targetMap,scope,label){
+  const imported=[];
+  const pageGroups=new Map();
+  for(const row of rows){
+    const p=row.page||1;
+    if(!pageGroups.has(p))pageGroups.set(p,[]);
+    pageGroups.get(p).push(row);
+  }
+
+  // Only employees required by the current weekly/biweekly post-payroll calculation
+  // are candidates. Match their real/alias names directly against the page text instead
+  // of depending on Gusto's title/SSN text order, which varies between PDF exports.
+  const required=requiredEmployeeTaxRows().filter(x=>x.scope===scope);
+  const candidates=[];
+  for(const req of required){
+    const actual=[...targetMap.values()].find(e=>normalizeName(e.employeeName)===normalizeName(req.name));
+    if(!actual)continue;
+    const names=[actual.employeeName,aliasTarget(actual.employeeName)].filter(Boolean);
+    candidates.push({actual,names:[...new Set(names.map(x=>String(x).trim()).filter(Boolean))]});
+  }
+
+  for(const [page,pageRows] of pageGroups){
+    const text=pageRows.map(r=>r.text).join(' ').replace(/\s+/g,' ').trim();
+
+    // Find the required employee whose name (or configured Gusto alias) appears on this page.
+    // Longest normalized name wins to avoid partial-name collisions.
+    let matched=null;
+    for(const c of candidates){
+      for(const nm of c.names){
+        const n=normalizeName(nm);
+        if(!n)continue;
+        const pageNorm=normalizeName(text);
+        if(pageNorm.includes(n)){
+          const score=n.length;
+          if(!matched||score>matched.score)matched={actual:c.actual,score};
+        }
+      }
+    }
+    if(!matched)continue;
+    const actual=matched.actual;
+    {
+      const pp=text.match(/Pay period:\s*([A-Za-z]{3,9})\s+(\d{1,2}),\s*(20\d{2})\s*-\s*([A-Za-z]{3,9})\s+(\d{1,2}),\s*(20\d{2})/i);
+      const gp=(scope==='Weekly'?GUSTO:BIWEEKLY).period;
+      if(pp&&gp){
+        const sp=isoYMD(+pp[3],monthNo(pp[1]),+pp[2]),ep=isoYMD(+pp[6],monthNo(pp[4]),+pp[5]);
+        if(sp!==gp.start||ep!==gp.end)throw new Error(`Wrong paystub period for ${actual.employeeName}: paystub is ${sp} to ${ep}, but the uploaded ${scope.toLowerCase()} GL is ${gp.start} to ${gp.end}. Upload the paystubs for the same payroll.`);
+      }
+    }
+
+    // Employee taxes are printed in the LEFT half of Gusto paystubs; Employer Tax is
+    // printed in the right half on the same visual rows. extractPdfRows() provides
+    // employeeTaxText using only x < 290 so employer amounts cannot be selected.
+    const taxStart=pageRows.findIndex(r=>/Employee Taxes Withheld/i.test(r.employeeTaxText||r.text));
+    const taxEnd=taxStart>=0?pageRows.findIndex((r,i)=>i>taxStart&&/Employee Deductions/i.test(r.employeeTaxText||r.text)):-1;
+    const taxRows=taxStart>=0?pageRows.slice(taxStart,taxEnd>taxStart?taxEnd:pageRows.length):pageRows;
+
+    let socialSecurity=null,medicare=null;
+    for(const tr of taxRows){
+      const rt=String(tr.employeeTaxText||tr.text||'').replace(/\s+/g,' ').trim();
+      if(socialSecurity==null&&/\bSocial Security\b/i.test(rt)){
+        const after=rt.slice(rt.search(/Social Security/i)+'Social Security'.length);
+        const m=after.match(/\$\s*([\d,]+(?:\.\d{1,2})?)/);
+        if(m)socialSecurity=safeNumber(m[1]);
+      }
+      if(medicare==null&&/\bMedicare\b/i.test(rt)){
+        const after=rt.slice(rt.search(/Medicare/i)+'Medicare'.length);
+        const m=after.match(/\$\s*([\d,]+(?:\.\d{1,2})?)/);
+        if(m)medicare=safeNumber(m[1]);
+      }
+      if(socialSecurity!=null&&medicare!=null)break;
+    }
+
+    // Employee Tax = TOTAL employee taxes withheld = the paystub Summary "Taxes" line (Current column).
+    let totalTaxes=null;
+    for(const tr of pageRows){
+      const rt=String(tr.text||'').replace(/\s+/g,' ').trim();
+      const mt=rt.match(/^Taxes \$\s*([\d,]+\.\d{2})/);
+      if(mt){totalTaxes=safeNumber(mt[1]);break;}
+    }
+    if(totalTaxes==null)continue;
+    // Control: the itemised employee tax lines (Current column) must add up to the Summary total.
+    let lineSum=0,lineCount=0;
+    for(const tr of taxRows){
+      const rt=String(tr.employeeTaxText||'').replace(/\s+/g,' ').trim();
+      if(!rt||/Employee Taxes Withheld|Employee Tax\b.*Current/i.test(rt))continue;
+      const ma=rt.match(/^[A-Za-z][A-Za-z .&'-]*?\s\$\s*([\d,]+\.\d{2})/);
+      if(ma){lineSum+=safeNumber(ma[1]);lineCount++;}
+    }
+    lineSum=roundMoney(lineSum);
+    if(lineCount>0&&Math.abs(lineSum-totalTaxes)>0.02)
+      throw new Error(`Employee tax control failed for ${actual.employeeName}: itemised employee taxes ${fmtM(lineSum)} do not equal the paystub Summary Taxes total ${fmtM(totalTaxes)}.`);
+    const tax=roundMoney(totalTaxes);
+    setEmployeeTax(scope,actual.employeeName,tax,`Gusto paystub PDF: total employee taxes ${fmtM(tax)} (Summary Taxes; incl. SS ${socialSecurity==null?'n/a':fmtM(socialSecurity)} + Medicare ${medicare==null?'n/a':fmtM(medicare)})`);
+    imported.push({employee:actual.employeeName,tax,socialSecurity,medicare,page});
+  }
+
+  if(!imported.length){
+    const wanted=required.map(x=>x.name).join(', ')||'no required employees';
+    throw new Error(`No required employee tax totals were found. Required for ${scope}: ${wanted}. Confirm the matching GL is uploaded first and this is the Gusto paystubs/earnings-statement PDF (each stub must show Summary → Taxes), not the Payroll Journal report.`);
+  }
+  return imported;
+}
+async function loadEmployeeTaxFile(f,scopeArg,statusId){
+  const scope=scopeArg||document.getElementById('taxImportScope')?.value||'Weekly';
+  const status=document.getElementById(statusId||'employeeTaxStatus');
+  status.textContent='Reading '+f.name+' ...';
+  const targetMap=scope==='Weekly'?GUSTO.employeeActual:BIWEEKLY.employeeActual;
+  if(!targetMap||!targetMap.size){status.textContent=`Upload the ${scope.toLowerCase()} GL first.`;afterGustoChange();return;}
+  const ext=f.name.split('.').pop().toLowerCase();
+  if(ext==='pdf'){
+    try{
+      const ab=await f.arrayBuffer();
+      const pdf=await pdfjsLib.getDocument({data:ab}).promise;
+      const rows=await extractPdfRows(pdf);
+      const imported=parseGustoPaystubTaxRows(rows,targetMap,scope,f.name);
+      const total=roundMoney(imported.reduce((a,x)=>a+x.tax,0));
+      status.textContent=`Imported ${imported.length} required employee tax value(s) from ${f.name}. Employee tax used = total employee taxes withheld (paystub Summary → Taxes). Imported total: ${fmtM(total)}.`;
+      drawEmployeeTaxTable();syncButtons();afterGustoChange();
+    }catch(err){status.textContent='Unable to read Gusto paystubs PDF: '+err.message;afterGustoChange();}
+    return;
+  }
+  const finish=(matrices,label)=>{
+    let imported=0;
+    for(const [sheetName,matrix] of Object.entries(matrices)){
+      let hr=-1,ni=-1,ssi=-1,mi=-1,ti=-1;
+      for(let r=0;r<Math.min(40,matrix.length);r++){
+        const h=(matrix[r]||[]).map(normalizeHeader);
+        ni=h.findIndex(x=>['employee','employee name','name','full name','worker'].includes(x));
+        ssi=h.findIndex(x=>['social security','employee social security','social security tax'].includes(x));
+        mi=h.findIndex(x=>['medicare','employee medicare','medicare tax'].includes(x));
+        ti=h.findIndex(x=>['employee tax','employee taxes','employee taxes withheld','taxes withheld','tax withheld','total employee tax','total taxes withheld'].includes(x));
+        if(ni>=0&&ti>=0){hr=r;break;}
+      }
+      if(hr<0)continue;
+      for(let r=hr+1;r<matrix.length;r++){
+        const name=String(matrix[r]?.[ni]??'').trim();
+        if(!name)continue;
+        const actual=[...targetMap.values()].find(e=>normalizeName(e.employeeName)===normalizeName(name)||normalizeName(aliasTarget(e.employeeName))===normalizeName(name));
+        if(!actual)continue;
+        const needed=requiredEmployeeTaxRows().some(x=>x.scope===scope&&normalizeName(x.name)===normalizeName(actual.employeeName));
+        if(!needed)continue;
+        let tax=null,source='';
+        const tt=safeNumber(matrix[r]?.[ti]);
+        if(tt==null)continue;
+        tax=roundMoney(tt);
+        source=`Imported total employee tax: ${label}${sheetName?` / ${sheetName}`:''}`;
+        setEmployeeTax(scope,actual.employeeName,tax,source);imported++;
+      }
+    }
+    if(!imported)throw new Error('No required employee-tax rows were found. Expected an Employee/Name column and a total employee-tax column (e.g. Employee Taxes).');
+    status.textContent=`Imported ${imported} required employee-tax value(s) for ${scope}.`;
+  };
+  if(ext==='csv'){
+    Papa.parse(f,{skipEmptyLines:false,complete:r=>{try{finish({'CSV':r.data},f.name)}catch(e){status.textContent=e.message;}}});
+  }else if(['xlsx','xls'].includes(ext)){
+    const rd=new FileReader();
+    rd.onload=e=>{try{
+      const wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+      const matrices={};for(const n of wb.SheetNames)matrices[n]=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,defval:'',raw:true});
+      finish(matrices,f.name);
+    }catch(err){status.textContent='Unable to read employee-tax file: '+err.message;}};
+    rd.readAsArrayBuffer(f);
+  }else status.textContent='Please upload PDF, XLSX, XLS or CSV.';
+}
+
+
+function emptyGusto(){return {uploaded:false,fileName:'',period:null,sourceWorkbook:null,actual:{},employeeActual:new Map(),comparison:null,warnings:[],status:'NOT CHECKED',basic:null,detailed:null,wcMatrix:null,hzMatrix:null,sourceWc:[],taxAssignmentValid:false,taxMessage:'NOT CHECKED',wcCalc:null,special:[]};}
+function emptyBiweekly(){return {uploaded:false,fileName:'',period:null,sourceWorkbook:null,_actual:null,employeeActual:new Map(),rows:[],warnings:[],status:'NOT CHECKED'};}
+function normalizeName(v=''){return String(v).trim().replace(/\s+/g,' ').toLowerCase();}
+function normalizeCode(v=''){return String(v).trim().replace(/\s+/g,' ').toLowerCase();}
+function normalizeHeader(v=''){return String(v).trim().toLowerCase().replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim();}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function escAttr(s){return String(s??'').replace(/"/g,'&quot;');}
+function round2(v){return Math.round((Number(v)+Number.EPSILON)*100)/100;}
+function roundMoney(v){const n=Number(v);if(!Number.isFinite(n))return null;return Math.sign(n)*Math.round((Math.abs(n)+1e-9)*100)/100;}
+function fmtH(v){return v==null?'—':round2(v).toFixed(2);}
+function fmtM(v){return v==null?'—':'$'+roundMoney(v).toFixed(2);}
+function safeNumber(v){if(v===null||v===undefined||v==='')return null;if(typeof v==='number')return Number.isFinite(v)?v:null;const n=Number(String(v).replace(/[$,]/g,'').replace(/^\((.*)\)$/,'-$1'));return Number.isFinite(n)?n:null;}
+function toISODate(v){if(v===''||v==null)return null;if(v instanceof Date){if(isNaN(v))return null;return `${v.getFullYear()}-${String(v.getMonth()+1).padStart(2,'0')}-${String(v.getDate()).padStart(2,'0')}`;}const s=String(v).trim();if(/^\d{4}-\d{2}-\d{2}/.test(s))return s.slice(0,10);const d=new Date(s);return isNaN(d)?null:toISODate(d);}
+function isWeekend(dateISO){const d=new Date(dateISO+'T00:00:00Z').getUTCDay();return d===0||d===6;}
+function inclusiveDays(a,b){if(!a||!b)return null;return Math.floor((new Date(b+'T00:00:00Z')-new Date(a+'T00:00:00Z'))/86400000)+1;}
+function employeeKey(r,name){const pid=String(r.payroll_id||'').trim(),u=String(r.username||'').trim();return pid?'pid:'+pid.toLowerCase():u?'user:'+u.toLowerCase():normalizeName(name);}
+function extractEffectiveDate(notes=''){const m=String(notes).match(/(\d{1,2})[\/.\-](\d{1,2})[\/.\-](20\d{2})/);return m?`${m[3]}-${String(m[1]).padStart(2,'0')}-${String(m[2]).padStart(2,'0')}`:null;}
+function currentRateRow(name){return rateRows.find(r=>normalizeName(r.name)===normalizeName(name))||null;}
+function resolveRate(name,dateISO){const r=currentRateRow(name);if(!r||!Number.isFinite(Number(r.rate))||Number(r.rate)<=0)return {rate:null,reason:'Missing/invalid employee pay rate'};const eff=extractEffectiveDate(r.notes);if(eff&&dateISO&&dateISO<eff){const h=HISTORICAL_RATES.filter(x=>normalizeName(x.name)===normalizeName(name)&&dateISO<=x.until).sort((a,b)=>b.until.localeCompare(a.until))[0];if(h)return {rate:Number(h.rate),source:'historical',note:`Prior approved rate through ${h.until}`};return {rate:null,reason:`Current rate is effective ${eff}, but no prior approved rate is configured`};}return {rate:Number(r.rate),source:'current',note:r.notes||''};}
+function employeeMode(name){return (employeeRows.find(x=>normalizeName(x.name)===normalizeName(name))||{mode:'AUTO'}).mode;}
+function fixedRule(name){return fixedRows.find(x=>normalizeName(x.name)===normalizeName(name))||null;}
+function jobCategory(code){const r=jobRuleRows.find(x=>normalizeCode(x.code)===normalizeCode(code));return r?r.category:'PAYROLL';}
+function aliasTarget(name){const a=aliasRows.find(x=>normalizeName(x.source)===normalizeName(name));return a&&a.target?a.target:name;}
+function wcRate(code){const r=wcRateRows.find(x=>String(x.code).trim()===String(code).trim());return r&&Number.isFinite(Number(r.rate))?Number(r.rate):null;}
+function observedEmployeeNameByKey(key){return RESULT?.empDisplay?.get(key)||key;}
+
+function drawSetup(){drawRates();drawEmployees();drawJobRules();drawFixed();drawAliases();drawWc();}
+function drawRates(){const t=document.getElementById('rateTable');if(!t)return;let h='<tr><th>Full Name</th><th>Pay Rate</th><th>Notes / Effective Date</th><th>Historical rate used before change</th><th></th></tr>';rateRows.forEach((r,i)=>{const hist=HISTORICAL_RATES.find(x=>normalizeName(x.name)===normalizeName(r.name));h+=`<tr><td><input value="${escAttr(r.name)}" onchange="rateRows[${i}].name=this.value;invalidate()"></td><td><input type="number" step="0.01" min="0" value="${r.rate??''}" onchange="rateRows[${i}].rate=Number(this.value);invalidate()"></td><td><input value="${escAttr(r.notes||'')}" style="width:280px" onchange="rateRows[${i}].notes=this.value;invalidate()"></td><td>${hist?fmtM(hist.rate)+' through '+hist.until:'—'}</td><td><button onclick="rateRows.splice(${i},1);drawRates();invalidate()">✕</button></td></tr>`;});t.innerHTML=h;}
+function drawEmployees(){const t=document.getElementById('employeeTable');if(!t)return;let h='<tr><th>Employee</th><th>Mode</th><th></th></tr>';employeeRows.forEach((r,i)=>h+=`<tr><td><input value="${escAttr(r.name)}" onchange="employeeRows[${i}].name=this.value;invalidate()"></td><td><select onchange="employeeRows[${i}].mode=this.value;invalidate()">${['REVIEW','AUTO','PAYROLL','CASH','EXCLUDE'].map(x=>`<option ${x===r.mode?'selected':''}>${x}</option>`).join('')}</select></td><td><button onclick="employeeRows.splice(${i},1);drawEmployees();invalidate()">✕</button></td></tr>`);t.innerHTML=h;}
+function drawJobRules(){const t=document.getElementById('jobRuleTable');if(!t)return;let h='<tr><th>Job Code 1</th><th>Category</th><th></th></tr>';jobRuleRows.forEach((r,i)=>h+=`<tr><td><input value="${escAttr(r.code)}" onchange="jobRuleRows[${i}].code=this.value;invalidate()"></td><td><select onchange="jobRuleRows[${i}].category=this.value;invalidate()">${['PAYROLL','CASH','REST','EXCLUDE'].map(x=>`<option ${x===r.category?'selected':''}>${x}</option>`).join('')}</select></td><td><button onclick="jobRuleRows.splice(${i},1);drawJobRules();invalidate()">✕</button></td></tr>`);t.innerHTML=h;}
+function drawFixed(){const t=document.getElementById('fixedTable');if(!t)return;let h='<tr><th>Employee</th><th>Fixed Amount</th><th>Max Hours</th><th></th></tr>';fixedRows.forEach((r,i)=>h+=`<tr><td><input value="${escAttr(r.name)}" onchange="fixedRows[${i}].name=this.value;invalidate()"></td><td><input type="number" step="0.01" value="${r.amount??''}" onchange="fixedRows[${i}].amount=Number(this.value);invalidate()"></td><td><input type="number" step="0.01" value="${r.maxHours??''}" onchange="fixedRows[${i}].maxHours=this.value===''?null:Number(this.value);invalidate()"></td><td><button onclick="fixedRows.splice(${i},1);drawFixed();invalidate()">✕</button></td></tr>`);t.innerHTML=h;}
+function drawAliases(){const t=document.getElementById('aliasTable');if(!t)return;let h='<tr><th>Timesheet</th><th>Gusto</th></tr>';aliasRows.forEach((r,i)=>h+=`<tr><td><input value="${escAttr(r.source)}" onchange="aliasRows[${i}].source=this.value"></td><td><input value="${escAttr(r.target)}" onchange="aliasRows[${i}].target=this.value"></td></tr>`);t.innerHTML=h;}
+function drawWc(){const t=document.getElementById('wcTable');if(!t)return;let h='<tr><th>WC Code</th><th>Rate</th><th>Notes</th></tr>';wcRateRows.forEach((r,i)=>h+=`<tr><td><input value="${escAttr(r.code)}" onchange="wcRateRows[${i}].code=this.value"></td><td><input type="number" step="0.000001" value="${r.rate}" onchange="wcRateRows[${i}].rate=Number(this.value)"></td><td><input value="${escAttr(r.notes||'')}" onchange="wcRateRows[${i}].notes=this.value"></td></tr>`);t.innerHTML=h;}
+function addEmployeeRow(){employeeRows.push({name:'',mode:'AUTO'});drawEmployees();}
+function addJobRule(){jobRuleRows.push({code:'',category:'PAYROLL'});drawJobRules();}
+function addFixedRule(){fixedRows.push({name:'',amount:null,maxHours:null});drawFixed();}
+function restoreDefaultRates(){rateRows=EMBEDDED_RATES.map(x=>({...x}));drawRates();invalidate();document.getElementById('rateFileStatus').textContent='Supplied updated hourly-rate master restored.';}
+function toggleSetup(){const x=document.getElementById('setupBox');x.open=!x.open;}
+function invalidate(){GUSTO_PREVIEW=emptyGustoPreview();if(APPROVAL.status==='APPROVED')APPROVAL={status:'NOT REVIEWED',timestamp:''};if(GUSTO.uploaded)GUSTO=emptyGusto();if(BIWEEKLY.uploaded)BIWEEKLY=emptyBiweekly();if(RAW_ROWS)process();}
+
+function inferPeriod(name){let m=String(name).match(/(20\d{2})[-_.](\d{2})[-_.](\d{2}).*?(?:thru|through|to)[ _-]*(20\d{2})[-_.](\d{2})[-_.](\d{2})/i);if(m)return {start:`${m[1]}-${m[2]}-${m[3]}`,end:`${m[4]}-${m[5]}-${m[6]}`};m=String(name).match(/(\d{1,2})[.\/-](\d{1,2})[.\/-](20\d{2}).*?(?:thru|through|to)[ _-]*(\d{1,2})[.\/-](\d{1,2})[.\/-](20\d{2})/i);return m?{start:`${m[3]}-${String(m[1]).padStart(2,'0')}-${String(m[2]).padStart(2,'0')}`,end:`${m[6]}-${String(m[4]).padStart(2,'0')}-${String(m[5]).padStart(2,'0')}`}:null;}
+function monthNo(v){const m={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};return m[String(v||'').slice(0,3).toLowerCase()]||null;}
+function isoYMD(y,m,d){return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;}
+function extractGlPeriod(matrices){const cells=[];for(const matrix of Object.values(matrices||{})){for(let r=0;r<Math.min((matrix||[]).length,20);r++){for(const v of (matrix[r]||[])){if(v!==null&&v!==undefined&&String(v).trim())cells.push(String(v).trim());}}}const text=cells.join(' | ');let check=null;for(const t of cells){let m=t.match(/check\s*date\s*:?\s*(20\d{2})[-\/.](\d{1,2})[-\/.](\d{1,2})/i);if(m){check={y:+m[1],m:+m[2],d:+m[3]};break;}}for(const t of cells){let x=t.match(/(?:payroll|period)[^|]*?([A-Za-z]{3,9})\s+(\d{1,2})(?:,?\s*(20\d{2}))?\s*[–—-]\s*(?:([A-Za-z]{3,9})\s+)?(\d{1,2})(?:,?\s*(20\d{2}))?/i);if(!x)continue;const sm=monthNo(x[1]),em=monthNo(x[4]||x[1]),sd=+x[2],ed=+x[5];if(!sm||!em)continue;let ey=x[6]?+x[6]:(x[3]?+x[3]:(check?check.y:null));if(!ey&&RESULT?.period?.end)ey=+RESULT.period.end.slice(0,4);if(!ey)continue;if(!x[6]&&check&&em>check.m&&em-check.m>6)ey--;let sy=x[3]?+x[3]:(sm>em?ey-1:ey);const p={start:isoYMD(sy,sm,sd),end:isoYMD(ey,em,ed),source:t};p.days=inclusiveDays(p.start,p.end);return p;}const explicit=text.match(/(20\d{2})[-\/.](\d{1,2})[-\/.](\d{1,2}).{0,40}?(?:to|through|thru|[–—])\s*(20\d{2})[-\/.](\d{1,2})[-\/.](\d{1,2})/i);if(explicit){const p={start:isoYMD(+explicit[1],+explicit[2],+explicit[3]),end:isoYMD(+explicit[4],+explicit[5],+explicit[6]),source:'report text'};p.days=inclusiveDays(p.start,p.end);return p;}return null;}
+function validateRegularGlPeriod(p){if(standalone()){if(!p)throw new Error('Pay period could not be detected from the GL title. Expected a title such as “Ledger for Regular Payroll Aug 31 – Sep 6”. Is this the Gusto General Ledger export?');if(p.days!==7)throw new Error(`Wrong GL length: detected ${p.days} days (${p.start} to ${p.end}). The weekly GL must cover exactly 7 days. If this is the 14-day GL, switch to “Biweekly payroll” at the top and upload it there.`);return true;}if(!p)throw new Error('Payroll period could not be detected from the GL report title. Expected a title such as “Ledger for Regular Payroll Aug 24 – Aug 30”.');if(!RESULT?.period?.start||!RESULT?.period?.end)throw new Error('Timesheet payroll period is not available.');if(p.start!==RESULT.period.start||p.end!==RESULT.period.end)throw new Error(`Wrong payroll period. Timesheet is ${RESULT.period.start} to ${RESULT.period.end}; uploaded regular GL is ${p.start} to ${p.end}. ${RESULT.period.frequency} must reconcile only to the same ${RESULT.period.frequency.toLowerCase()} period.`);const expected=RESULT.period.frequency==='Biweekly'?14:7;if(p.days!==expected)throw new Error(`Wrong GL length: detected ${p.days} days; ${RESULT.period.frequency} requires ${expected} days.`);return true;}
+function validateBiweeklyGlPeriod(p){if(standalone()){if(!p)throw new Error('Pay period could not be detected from the GL title. Is this the Gusto General Ledger export?');if(p.days!==14)throw new Error(`Wrong GL length: detected ${p.days} days (${p.start} to ${p.end}). The biweekly GL must cover exactly 14 days. If this is the 7-day GL, switch to “Weekly payroll” at the top and upload it there.`);return true;}if(!p)throw new Error('Biweekly payroll period could not be detected from the GL report title.');if(p.days!==14)throw new Error(`Wrong GL length: detected ${p.days} days. The biweekly upload must cover exactly 14 calendar days.`);if(RESULT?.period?.frequency==='Biweekly'){if(p.start!==RESULT.period.start||p.end!==RESULT.period.end)throw new Error(`Wrong biweekly period. Selected biweekly timesheet is ${RESULT.period.start} to ${RESULT.period.end}; uploaded GL is ${p.start} to ${p.end}.`);}else if(RESULT?.period?.end&&p.end!==RESULT.period.end){throw new Error(`Biweekly cycle is not aligned to the selected weekly cycle. Weekly period ends ${RESULT.period.end}; uploaded biweekly GL ends ${p.end}. Upload the biweekly GL that ends on the same payroll-cycle end date.`);}return true;}
+function autofillPeriod(name){const p=inferPeriod(name),a=document.getElementById('payPeriodStart'),b=document.getElementById('payPeriodEnd'),f=document.getElementById('payrollFrequency');if(p){a.value=p.start;b.value=p.end;PAY_PERIOD_SOURCE='filename';const d=inclusiveDays(p.start,p.end);if(d===7)f.value='Weekly';else if(d===14)f.value='Biweekly';document.getElementById('payPeriodHint').textContent=`Auto-filled from filename: ${p.start} to ${p.end} (${d} calendar days).`;}else{PAY_PERIOD_SOURCE='manual';document.getElementById('payPeriodHint').textContent='Enter the complete payroll period. Weekly = 7 days; Biweekly = 14 days.';}}
+function initPeriod(){const a=document.getElementById('payPeriodStart'),b=document.getElementById('payPeriodEnd');if(a.value||b.value)return;const now=new Date(),day=(now.getDay()+6)%7,mon=new Date(now.getFullYear(),now.getMonth(),now.getDate()-day-7),sun=new Date(mon.getFullYear(),mon.getMonth(),mon.getDate()+6),iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;a.value=iso(mon);b.value=iso(sun);PAY_PERIOD_SOURCE='default';}
+
+function loadTimesheet(f){autofillPeriod(f.name);document.getElementById('fileStatus').textContent='Reading '+f.name+' ...';const ext=f.name.split('.').pop().toLowerCase();if(ext==='csv'){Papa.parse(f,{header:true,skipEmptyLines:true,complete:r=>onRows(r.data,f.name),error:e=>showFileError(e.message)});}else if(['xlsx','xls'].includes(ext)){const rd=new FileReader();rd.onload=e=>{try{const wb=XLSX.read(e.target.result,{type:'array',cellDates:true}),sn=wb.SheetNames.includes('Data')?'Data':wb.SheetNames[0];onRows(XLSX.utils.sheet_to_json(wb.Sheets[sn],{defval:'',raw:true}),f.name+' ('+sn+')');}catch(err){showFileError(err.message)}};rd.readAsArrayBuffer(f);}else showFileError('Please upload CSV, XLSX or XLS.');}
+function showFileError(m){document.getElementById('fileStatus').innerHTML='<span style="color:var(--bad)">'+esc(m)+'</span>';}
+function onRows(data,label){data=data.filter(r=>Object.values(r).some(v=>v!==''&&v!=null));if(!data.length)return showFileError('No data rows found.');const headers=Object.keys(data[0]),nm={};headers.forEach(h=>nm[String(h).trim().toLowerCase()]=h);const missing=REQUIRED.filter(x=>!(x in nm));if(missing.length)return showFileError('Missing required column(s): '+missing.join(', '));RAW_ROWS=data.map((r,i)=>{const g=k=>r[nm[k]]??'';return {sourceRow:i+2,username:nm.username?String(r[nm.username]??'').trim():'',payroll_id:nm.payroll_id?String(r[nm.payroll_id]??'').trim():'',fname:String(g('fname')).trim(),lname:String(g('lname')).trim(),number:nm.number?r[nm.number]:'',group:nm.group?r[nm.group]:'',local_date:g('local_date'),local_day:g('local_day'),local_start_time:g('local_start_time'),local_end_time:g('local_end_time'),tz:g('tz'),hours_raw:g('hours'),jobcode_1:String(g('jobcode_1')).trim(),jobcode_2:String(g('jobcode_2')).trim(),jobcode_3:String(g('jobcode_3')).trim(),location:g('location')};});
+// Add observed names/codes without overriding approved defaults.
+for(const r of RAW_ROWS){const n=(r.fname+' '+r.lname).trim().replace(/\s+/g,' ');if(n&&!employeeRows.some(x=>normalizeName(x.name)===normalizeName(n)))employeeRows.push({name:n,mode:'REVIEW'});if(r.jobcode_1&&!jobRuleRows.some(x=>normalizeCode(x.code)===normalizeCode(r.jobcode_1)))jobRuleRows.push({code:r.jobcode_1,category:'PAYROLL'});}drawEmployees();drawJobRules();document.getElementById('fileStatus').textContent=`${RAW_ROWS.length} rows loaded from ${label}.`;document.getElementById('results').style.display='block';process();}
+
+function mkReview(r,name,reason,severity='Blocking'){return {sourceRow:r?.sourceRow??'CONFIG',employee:name||'(all)',date:r?.local_date||'',hours:r?.hours_raw??'',jobcode_1:r?.jobcode_1||'',reason,severity};}
+function process(){if(!RAW_ROWS)return;APPROVAL.status=APPROVAL.status==='APPROVED'?'NOT REVIEWED':APPROVAL.status;GUSTO=emptyGusto();BIWEEKLY=emptyBiweekly();const review=[],seen=new Set(),dataRows=[],empDisplay=new Map();const start=toISODate(document.getElementById('payPeriodStart').value),end=toISODate(document.getElementById('payPeriodEnd').value),freq=document.getElementById('payrollFrequency').value,need=freq==='Biweekly'?14:7,days=inclusiveDays(start,end);if(!start||!end)review.push(mkReview(null,'','Pay period start and end are required.'));else if(start>end)review.push(mkReview(null,'','Pay period start must be on or before end.'));else if(days!==need)review.push(mkReview(null,'',`${freq} payroll requires exactly ${need} calendar days; selected period has ${days}.`));
+for(const r of RAW_ROWS){const name=(r.fname+' '+r.lname).trim().replace(/\s+/g,' '),key=employeeKey(r,name),date=toISODate(r.local_date),h=safeNumber(r.hours_raw),cat=jobCategory(r.jobcode_1),mode=employeeMode(name);empDisplay.set(key,name);const dupKey=JSON.stringify([r.fname,r.lname,r.local_date,r.local_start_time,r.local_end_time,r.hours_raw,r.jobcode_1,r.jobcode_2,r.jobcode_3,r.location]);const dup=seen.has(dupKey);seen.add(dupKey);if(!r.fname||!r.lname)review.push(mkReview(r,name,'Missing first/last name'));if(!date)review.push(mkReview(r,name,'Missing or invalid local_date'));if(h==null)review.push(mkReview(r,name,'Missing or non-numeric hours'));else if(h<0)review.push(mkReview(r,name,'Negative hours','Warning'));if(!r.jobcode_1)review.push(mkReview(r,name,'Missing jobcode_1'));if(mode==='REVIEW')review.push(mkReview(r,name,'Employee is not classified in Employee Master'));if(dup)review.push(mkReview(r,name,'Duplicate source row','Warning'));if(date&&start&&end&&(date<start||date>end))review.push(mkReview(r,name,'Timesheet row falls outside selected pay period'));const rr=resolveRate(name,date);if(h!=null&&cat!=='EXCLUDE'&&mode!=='EXCLUDE'&&rr.rate==null)review.push(mkReview(r,name,rr.reason||'Missing rate'));dataRows.push({...r,fullname:name,employeeKey:key,dateISO:date,hours:h,jobCategory:cat,employeeMode:mode,route:null,payrate:rr.rate,rateSource:rr.source||'',totalPay:rr.rate!=null&&h!=null?roundMoney(h*rr.rate):null});}
+// Route rows by employee/day. Rest follows adjacent work stream; ambiguous rest is blocking.
+const groups=new Map();for(const x of dataRows){const k=x.employeeKey+'||'+x.dateISO;if(!groups.has(k))groups.set(k,[]);groups.get(k).push(x);}for(const rows of groups.values()){rows.sort((a,b)=>a.sourceRow-b.sourceRow);const baseRoute=x=>{if(x.employeeMode==='EXCLUDE'||x.employeeMode==='REVIEW')return 'EXCLUDE';if(x.jobCategory==='EXCLUDE')return 'EXCLUDE';if(x.jobCategory==='REST')return 'REST';if(x.employeeMode==='CASH')return 'CASH';if(x.jobCategory==='CASH')return 'CASH';return 'PAYROLL';};const br=rows.map(baseRoute);for(let i=0;i<rows.length;i++){const x=rows[i];if(br[i]!=='REST'){x.route=br[i];continue;}let p=null,n=null;for(let j=i-1;j>=0;j--){if(br[j]==='PAYROLL'||br[j]==='CASH'){p=br[j];break;}}for(let j=i+1;j<rows.length;j++){if(br[j]==='PAYROLL'||br[j]==='CASH'){n=br[j];break;}}if(x.employeeMode==='CASH')x.route='CASH';else if(p&&n&&p===n)x.route=p;else if(p&&!n)x.route=p;else if(n&&!p)x.route=n;else if(!p&&!n){const hasP=br.includes('PAYROLL'),hasC=br.includes('CASH');if(hasP&&!hasC)x.route='PAYROLL';else if(hasC&&!hasP)x.route='CASH';else{x.route='AMBIGUOUS';review.push(mkReview(x,x.fullname,'Rest break cannot be allocated to Payroll or RSC cash on this day'));}}else{x.route='AMBIGUOUS';review.push(mkReview(x,x.fullname,'Rest break sits between Payroll and RSC cash work; allocation requires review'));}}}
+// Totals and payroll daily calculations.
+let rawHours=0,lunchHours=0,payrollHours=0,cashHours=0,excludedHours=0;for(const x of dataRows){if(Number.isFinite(x.hours))rawHours+=x.hours;if(x.jobCategory==='EXCLUDE'&&normalizeCode(x.jobcode_1)==='lunch break')lunchHours+=Number(x.hours)||0;if(x.route==='PAYROLL')payrollHours+=Number(x.hours)||0;else if(x.route==='CASH')cashHours+=Number(x.hours)||0;else if(x.route==='EXCLUDE'&&x.jobCategory!=='EXCLUDE')excludedHours+=Number(x.hours)||0;}
+const dailyMap=new Map();for(const x of dataRows.filter(x=>x.route==='PAYROLL'&&Number.isFinite(x.hours)&&x.dateISO)){const k=x.employeeKey+'||'+x.dateISO;if(!dailyMap.has(k))dailyMap.set(k,{employeeKey:x.employeeKey,employeeName:x.fullname,date:x.dateISO,paidHours:0,restHours:0,rates:new Set()});const d=dailyMap.get(k);d.paidHours+=x.hours;if(x.jobCategory==='REST')d.restHours+=x.hours;if(x.payrate!=null)d.rates.add(Number(x.payrate));}
+const daily=[];for(const d of dailyMap.values()){if(d.rates.size!==1){review.push({sourceRow:'CALC',employee:d.employeeName,date:d.date,hours:d.paidHours,jobcode_1:'',reason:d.rates.size===0?'No valid rate for payable day':'Multiple rates occur within one work day',severity:'Blocking'});d.rate=d.rates.size?Array.from(d.rates)[0]:null;}else d.rate=Array.from(d.rates)[0];const weekend=document.getElementById('weekendOT').checked&&isWeekend(d.date);if(weekend){d.regularHours=0;d.overtimeHours=Math.min(d.paidHours,12);d.doubleHours=Math.max(d.paidHours-12,0);}else{d.regularHours=Math.min(d.paidHours,8);d.overtimeHours=d.paidHours<=8?0:Math.min(d.paidHours-8,4);d.doubleHours=Math.max(d.paidHours-12,0);}d.weekend=weekend;daily.push(d);}daily.sort((a,b)=>a.employeeName.localeCompare(b.employeeName)||a.date.localeCompare(b.date));
+const empMap=new Map();for(const d of daily){if(!empMap.has(d.employeeKey))empMap.set(d.employeeKey,{employeeKey:d.employeeKey,employeeName:d.employeeName,daily:[],regularHours:0,overtimeHours:0,doubleHours:0,paidHours:0,regExact:0,otExact:0,doubleExact:0,rates:new Set()});const e=empMap.get(d.employeeKey);e.daily.push(d);e.paidHours+=d.paidHours;e.regularHours+=d.regularHours;e.overtimeHours+=d.overtimeHours;e.doubleHours+=d.doubleHours;if(d.rate!=null){e.rates.add(d.rate);e.regExact+=d.regularHours*d.rate;e.otExact+=d.overtimeHours*d.rate*1.5;e.doubleExact+=d.doubleHours*d.rate*Number(document.getElementById('doubleMultiplier').value||2);}}
+const employees=[];for(const e of empMap.values()){const fr=fixedRule(e.employeeName);let regularPay=roundMoney(e.regExact),overtimePay=roundMoney(e.otExact),doublePay=roundMoney(e.doubleExact),fixedPay=null;if(fr&&Number.isFinite(Number(fr.amount))){if(fr.maxHours!=null&&e.paidHours>Number(fr.maxHours)+1e-9)review.push({sourceRow:'CONFIG',employee:e.employeeName,date:'',hours:e.paidHours,jobcode_1:'',reason:`Fixed-pay threshold exceeded (${e.paidHours.toFixed(2)} > ${fr.maxHours})`,severity:'Blocking'});else{fixedPay=roundMoney(Number(fr.amount));regularPay=fixedPay;overtimePay=0;doublePay=0;}}const totalWages=roundMoney((regularPay||0)+(overtimePay||0)+(doublePay||0));const rates=Array.from(e.rates).sort((a,b)=>a-b);employees.push({...e,rate:rates.length===1?rates[0]:null,rateLabel:rates.length===1?fmtM(rates[0]):rates.length?'VARIES':'MISSING',regularPay,overtimePay,doublePay,fixedPay,totalWages});}employees.sort((a,b)=>a.employeeName.localeCompare(b.employeeName));
+// Cash aggregation: straight-time by component.
+const cashMap=new Map();for(const x of dataRows.filter(x=>x.route==='CASH'&&Number.isFinite(x.hours))){if(!cashMap.has(x.employeeKey))cashMap.set(x.employeeKey,{employeeKey:x.employeeKey,fullname:x.fullname,rscH:0,restH:0,otherH:0,rscExact:0,restExact:0,otherExact:0,rates:new Set()});const c=cashMap.get(x.employeeKey);if(x.payrate!=null)c.rates.add(x.payrate);const pay=x.payrate==null?0:x.hours*x.payrate;if(x.jobCategory==='REST'){c.restH+=x.hours;c.restExact+=pay;}else if(normalizeCode(x.jobcode_1)==='rsc'||x.jobCategory==='CASH'){c.rscH+=x.hours;c.rscExact+=pay;}else{c.otherH+=x.hours;c.otherExact+=pay;}}const cashRows=Array.from(cashMap.values()).map(c=>{const rates=Array.from(c.rates);const rscPay=roundMoney(c.rscExact),restPay=roundMoney(c.restExact),otherPay=roundMoney(c.otherExact);return {...c,total:c.rscH+c.restH+c.otherH,rateLabel:rates.length===1?fmtM(rates[0]):rates.length?'VARIES':'MISSING',rscPay,restPay,otherPay,totalPay:roundMoney(c.rscExact+c.restExact+c.otherExact)};}).sort((a,b)=>a.fullname.localeCompare(b.fullname));
+// Rest report.
+const restMap=new Map();for(const x of dataRows.filter(x=>x.jobCategory==='REST'&&Number.isFinite(x.hours))){const k=x.employeeKey;if(!restMap.has(k))restMap.set(k,{employee:x.fullname,payrollHours:0,cashHours:0,payrollPay:0,cashPay:0});const r=restMap.get(k),pay=x.payrate==null?0:x.hours*x.payrate;if(x.route==='PAYROLL'){r.payrollHours+=x.hours;r.payrollPay+=pay;}else if(x.route==='CASH'){r.cashHours+=x.hours;r.cashPay+=pay;}}const restRows=Array.from(restMap.values()).map(r=>({...r,payrollPay:roundMoney(r.payrollPay),cashPay:roundMoney(r.cashPay),totalHours:r.payrollHours+r.cashHours,totalPay:roundMoney(r.payrollPay+r.cashPay)})).sort((a,b)=>a.employee.localeCompare(b.employee));
+// Job totals.
+const jobTotals=new Map();for(const x of dataRows){const k=x.jobcode_1||'(missing)';if(!jobTotals.has(k))jobTotals.set(k,{rows:0,hours:0,payrollHours:0,cashHours:0,excludedHours:0,straightPay:0});const j=jobTotals.get(k);j.rows++;if(Number.isFinite(x.hours)){j.hours+=x.hours;if(x.route==='PAYROLL')j.payrollHours+=x.hours;else if(x.route==='CASH')j.cashHours+=x.hours;else j.excludedHours+=x.hours;}if(x.totalPay!=null&&x.route!=='EXCLUDE')j.straightPay+=x.totalPay;}
+const consolidated=employees.reduce((a,e)=>{a.paidHours+=e.paidHours;a.regularHours+=e.regularHours;a.overtimeHours+=e.overtimeHours;a.doubleHours+=e.doubleHours;a.regularPay+=e.regularPay||0;a.overtimePay+=e.overtimePay||0;a.doublePay+=e.doublePay||0;a.totalWages+=e.totalWages||0;return a;},{paidHours:0,regularHours:0,overtimeHours:0,doubleHours:0,regularPay:0,overtimePay:0,doublePay:0,totalWages:0});for(const k of Object.keys(consolidated))consolidated[k]=roundMoney(consolidated[k]);
+const cashTotals=cashRows.reduce((a,c)=>{a.rscH+=c.rscH;a.restH+=c.restH;a.otherH+=c.otherH;a.total+=c.total;a.rscExact+=c.rscExact;a.restExact+=c.restExact;a.otherExact+=c.otherExact;return a;},{rscH:0,restH:0,otherH:0,total:0,rscExact:0,restExact:0,otherExact:0});cashTotals.rscH=round2(cashTotals.rscH);cashTotals.restH=round2(cashTotals.restH);cashTotals.otherH=round2(cashTotals.otherH);cashTotals.total=round2(cashTotals.total);cashTotals.rscPay=roundMoney(cashTotals.rscExact);cashTotals.restPay=roundMoney(cashTotals.restExact);cashTotals.otherPay=roundMoney(cashTotals.otherExact);cashTotals.totalPay=roundMoney(cashTotals.rscExact+cashTotals.restExact+cashTotals.otherExact);
+const hourDiff=round2(rawHours-(lunchHours+payrollHours+cashHours+excludedHours));if(Math.abs(hourDiff)>0.01)review.push({sourceRow:'CONTROL',employee:'(all)',date:'',hours:hourDiff,jobcode_1:'',reason:'Hours control does not reconcile: Raw ≠ Lunch + Payroll + Cash + Other excluded',severity:'Blocking'});
+RESULT={dataRows,review,empDisplay,payroll:{employees,daily,consolidated},cashRows,cashTotals,restRows,jobTotals,period:{start,end,frequency:freq,days,source:PAY_PERIOD_SOURCE},stats:{sourceRows:RAW_ROWS.length,employees:empDisplay.size,rawHours:round2(rawHours),lunchHours:round2(lunchHours),payrollHours:round2(payrollHours),cashHours:round2(cashHours),excludedHours:round2(excludedHours),hourDiff,reviewCount:new Set(review.map(r=>r.sourceRow+'|'+r.reason)).size,...consolidated}};
+renderAll();}
+
+function renderAll(){renderStats();renderIssue();buildTabs();renderApproval();renderGusto();drawEmployeeTaxTable();syncButtons();}
+function renderStats(){const s=RESULT.stats;document.getElementById('statGrid').innerHTML=[['Employees',s.employees],['Source Rows',s.sourceRows],['Raw Hours',fmtH(s.rawHours)],['Payroll Hours',fmtH(s.payrollHours)],['Cash Hours',fmtH(s.cashHours)],['Regular',fmtH(s.regularHours)],['OT',fmtH(s.overtimeHours)],['Double',fmtH(s.doubleHours)],['Review',s.reviewCount]].map(([l,n])=>`<div class="stat"><div class="n">${n}</div><div class="l">${l}</div></div>`).join('');}
+function renderIssue(){const b=RESULT.review.filter(x=>x.severity==='Blocking'),w=RESULT.review.filter(x=>x.severity!=='Blocking'),n=a=>new Set(a.map(x=>x.sourceRow+'|'+x.reason)).size;document.getElementById('issueBanner').innerHTML=b.length?`<div class="issue-bad" onclick="setTab('Review')"><b>${n(b)} blocking issue(s)</b> must be fixed before approval.${w.length?' '+n(w)+' warning(s) also require review.':''}</div>`:w.length?`<div class="note" onclick="setTab('Review')"><b>${n(w)} warning(s)</b> to review before approval.</div>`:'<div class="issue-ok">✓ No calculation issues found.</div>';}
+function buildTabs(){document.getElementById('tabBar').innerHTML=TABS.map(t=>`<div class="tab ${t===activeTab?'active':''}" onclick="setTab('${t}')">${t}</div>`).join('');renderTab();}
+function setTab(t){activeTab=t;buildTabs();}
+function renderTab(){const c=document.getElementById('tabContent'),s=RESULT.stats;if(activeTab==='Summary'){c.innerHTML=summaryHtml();return;}if(activeTab==='Employee Payroll'){const cards=RESULT.payroll.employees.map(e=>`<details class="employee-card"><summary>${esc(e.employeeName)} — Paid ${fmtH(e.paidHours)} | Reg ${fmtH(e.regularHours)} | OT ${fmtH(e.overtimeHours)} | Double ${fmtH(e.doubleHours)} | Wages ${fmtM(e.totalWages)}</summary><div class="employee-body"><table><tr><th>Rate</th><th>Regular Pay</th><th>OT Pay</th><th>Double Pay</th><th>Fixed Override</th><th>Total</th></tr><tr><td>${e.rateLabel}</td><td>${fmtM(e.regularPay)}</td><td>${fmtM(e.overtimePay)}</td><td>${fmtM(e.doublePay)}</td><td>${e.fixedPay==null?'—':fmtM(e.fixedPay)}</td><td>${fmtM(e.totalWages)}</td></tr></table></div></details>`).join('');c.innerHTML=cards||'<p class="small">No payroll employees.</p>';return;}if(activeTab==='Daily Calculation'){c.innerHTML=tableHtml(['Employee','Date','Weekend OT','Paid Hours','Regular','OT','Double','Rate'],RESULT.payroll.daily.map(d=>[d.employeeName,d.date,d.weekend?'YES':'NO',fmtH(d.paidHours),fmtH(d.regularHours),fmtH(d.overtimeHours),fmtH(d.doubleHours),d.rate==null?'MISSING':fmtM(d.rate)]));return;}if(activeTab==='Data'){c.innerHTML='<div class="small" style="margin-bottom:8px">Only Job Code 1 controls treatment. Job Code 2/3 are audit detail.</div>'+tableHtml(['Employee','Date','Hours','Job Code 1','Job Code 2','Route','Rate','Straight Pay'],RESULT.dataRows.map(r=>[r.fullname,r.dateISO||r.local_date,fmtH(r.hours),r.jobcode_1,r.jobcode_2,r.route||'—',r.payrate==null?'MISSING':fmtM(r.payrate),r.totalPay==null?'—':fmtM(r.totalPay)]));return;}if(activeTab==='Overtime Calculation'){const rows=RESULT.payroll.daily.map(d=>[d.employeeName,d.date,fmtH(d.paidHours),fmtH(d.regularHours),fmtH(d.overtimeHours),fmtH(d.doubleHours),d.weekend?'Weekend OT':'Daily 8/12 rule']);rows.push(['Grand Total','',fmtH(s.payrollHours),fmtH(s.regularHours),fmtH(s.overtimeHours),fmtH(s.doubleHours),'']);c.innerHTML=tableHtml(['Employee','Date','Total Paid Hours','Regular','Overtime','Double','Rule'],rows,true);return;}if(activeTab==='RSC + Rest'){const rows=RESULT.cashRows.map(r=>[r.fullname,fmtH(r.rscH),fmtH(r.restH),fmtH(r.otherH),fmtH(r.total),r.rateLabel,fmtM(r.rscPay),fmtM(r.restPay),fmtM(r.otherPay),fmtM(r.totalPay)]);rows.push(['Grand Total',fmtH(RESULT.cashTotals.rscH),fmtH(RESULT.cashTotals.restH),fmtH(RESULT.cashTotals.otherH),fmtH(RESULT.cashTotals.total),'',fmtM(RESULT.cashTotals.rscPay),fmtM(RESULT.cashTotals.restPay),fmtM(RESULT.cashTotals.otherPay),fmtM(RESULT.cashTotals.totalPay)]);c.innerHTML='<div class="small" style="margin-bottom:8px">Includes RSC rows from mixed employees (for example, payroll employees who also worked RSC). Cash hours are not included in Gusto OT.</div>'+tableHtml(['Employee','RSC Hours','Rest Break Cash','Other Cash','Total Hours','Rate','RSC Pay','Rest Pay','Other Pay','Total Cash'],rows,true);return;}if(activeTab==='Rest Breaks'){c.innerHTML=tableHtml(['Employee','Payroll Rest Hours','Cash Rest Hours','Total Rest','Payroll Rest Pay','Cash Rest Pay','Total Rest Pay'],RESULT.restRows.map(r=>[r.employee,fmtH(r.payrollHours),fmtH(r.cashHours),fmtH(r.totalHours),fmtM(r.payrollPay),fmtM(r.cashPay),fmtM(r.totalPay)]));return;}if(activeTab==='Job Codes'){c.innerHTML=tableHtml(['Job Code 1','Rows','Total Hours','Payroll Hours','Cash Hours','Excluded Hours','Straight Pay'],Array.from(RESULT.jobTotals.entries()).sort((a,b)=>b[1].hours-a[1].hours).map(([k,j])=>[k,j.rows,fmtH(j.hours),fmtH(j.payrollHours),fmtH(j.cashHours),fmtH(j.excludedHours),fmtM(j.straightPay)]));return;}if(activeTab==='Hourly Rates'){c.innerHTML=tableHtml(['Employee','Current Rate','Notes','Historical Override'],rateRows.map(r=>{const h=HISTORICAL_RATES.find(x=>normalizeName(x.name)===normalizeName(r.name));return[r.name,fmtM(r.rate),r.notes||'',h?`${fmtM(h.rate)} through ${h.until}`:''];}));return;}if(activeTab==='Review'){c.innerHTML=RESULT.review.length?tableHtml(['Row','Employee','Date','Hours','Job Code 1','Reason','Severity'],RESULT.review.map(r=>[r.sourceRow,r.employee,r.date,r.hours,r.jobcode_1,r.reason,r.severity])):'<div class="issue-ok">✓ No rows require review.</div>';return;}if(activeTab==='Post-Payroll Reconciliation'){c.innerHTML=postPayrollHtml();return;}if(activeTab==='Biweekly Allocations'){c.innerHTML=biweeklyHtml();return;}}
+function tableHtml(headers,rows,totalLast=false){return `<div class="overflow"><table><tr>${headers.map(x=>'<th>'+esc(x)+'</th>').join('')}</tr>${rows.map((r,i)=>`<tr class="${totalLast&&i===rows.length-1?'tot-row':''}">${r.map(x=>'<td>'+esc(x)+'</td>').join('')}</tr>`).join('')}</table></div>`;}
+// Expected-output helpers intentionally keep calculation precision.
+// We only clean JavaScript floating-point noise; we do NOT round payroll values to cents here.
+function calcValue(v){const n=Number(v);return Number.isFinite(n)?Math.round((n+Number.EPSILON)*1e10)/1e10:0;}
+function fmtCalc(v,maxDp=4){if(v==null||!Number.isFinite(Number(v)))return '—';const n=calcValue(v);return n.toFixed(maxDp).replace(/\.?0+$/,'');}
+function expectedPayrollStraightRows(){
+  const m=new Map();
+  for(const x of RESULT.dataRows.filter(x=>x.route==='PAYROLL'&&Number.isFinite(x.hours))){
+    const k=x.employeeKey;
+    if(!m.has(k))m.set(k,{name:x.fullname,hours:0,pay:0});
+    const z=m.get(k);z.hours+=x.hours;if(x.payrate!=null)z.pay+=x.hours*x.payrate;
+  }
+  return Array.from(m.values()).map(x=>({...x,hours:calcValue(x.hours),pay:calcValue(x.pay)})).sort((a,b)=>a.name.localeCompare(b.name));
+}
+function expectedPayrollRscRows(){
+  const m=new Map();
+  for(const x of RESULT.dataRows.filter(x=>x.route==='CASH'&&x.employeeMode==='PAYROLL'&&x.jobCategory==='CASH'&&Number.isFinite(x.hours))){
+    const k=x.employeeKey;if(!m.has(k))m.set(k,{name:x.fullname,hours:0,pay:0});const z=m.get(k);z.hours+=x.hours;if(x.payrate!=null)z.pay+=x.hours*x.payrate;
+  }
+  return Array.from(m.values()).map(x=>({...x,hours:calcValue(x.hours),pay:calcValue(x.pay)})).sort((a,b)=>a.name.localeCompare(b.name));
+}
+function expectedCashEmployeeRows(){
+  const m=new Map();
+  // Only CASH-classified employees are included here. Payroll employees with RSC are intentionally excluded.
+  // Only RSC and Rest Break rows form this client working-paper table.
+  for(const x of RESULT.dataRows.filter(x=>x.route==='CASH'&&x.employeeMode==='CASH'&&(x.jobCategory==='CASH'||x.jobCategory==='REST')&&Number.isFinite(x.hours))){
+    const k=x.employeeKey;
+    if(!m.has(k))m.set(k,{name:x.fullname,rscH:0,restH:0,rscPay:0,restPay:0});
+    const z=m.get(k),pay=x.payrate==null?0:x.hours*x.payrate;
+    if(x.jobCategory==='REST'){z.restH+=x.hours;z.restPay+=pay;}else{z.rscH+=x.hours;z.rscPay+=pay;}
+  }
+  return Array.from(m.values()).map(x=>({
+    ...x,
+    rscH:calcValue(x.rscH),restH:calcValue(x.restH),hours:calcValue(x.rscH+x.restH),
+    rscPay:calcValue(x.rscPay),restPay:calcValue(x.restPay),pay:calcValue(x.rscPay+x.restPay)
+  })).sort((a,b)=>a.name.localeCompare(b.name));
+}
+function expectedJobDetailRows(){
+  const m=new Map();
+  for(const x of RESULT.dataRows.filter(x=>x.jobCategory!=='EXCLUDE'&&x.route!=='EXCLUDE'&&Number.isFinite(x.hours))){
+    const j1=x.jobcode_1||'(blank)',j2=x.jobcode_2||'(blank)',k=j1+'||'+j2;
+    if(!m.has(k))m.set(k,{job1:j1,job2:j2,hours:0,pay:0});const z=m.get(k);z.hours+=x.hours;if(x.payrate!=null)z.pay+=x.hours*x.payrate;
+  }
+  const rows=Array.from(m.values()).map(x=>({...x,hours:calcValue(x.hours),pay:calcValue(x.pay)}));
+  const order=['Bluntd Cones','Clubhouse Drops','Crysp','Rest break','RSC'];
+  rows.sort((a,b)=>{const ai=order.indexOf(a.job1),bi=order.indexOf(b.job1);if(ai!==bi)return (ai<0?999:ai)-(bi<0?999:bi);return a.job2.localeCompare(b.job2);});
+  return rows;
+}
+function expectedOvertimeRows(){return RESULT.payroll.employees.map(e=>({name:e.employeeName,hours:calcValue(e.paidHours),regular:calcValue(e.regularHours),ot:calcValue(e.overtimeHours),double:calcValue(e.doubleHours)}));}
+function expectedControlTotals(){
+  const p=expectedPayrollStraightRows(),pr=expectedPayrollRscRows(),ce=expectedCashEmployeeRows(),jr=expectedJobDetailRows(),ot=expectedOvertimeRows();
+  const sum=(a,k)=>calcValue(a.reduce((t,x)=>t+(Number(x[k])||0),0));
+  return {payrollHours:sum(p,'hours'),payrollPay:sum(p,'pay'),payrollRscHours:sum(pr,'hours'),payrollRscPay:sum(pr,'pay'),cashHours:sum(ce,'hours'),cashPay:sum(ce,'pay'),cashRscHours:sum(ce,'rscH'),cashRestHours:sum(ce,'restH'),cashRscPay:sum(ce,'rscPay'),cashRestPay:sum(ce,'restPay'),jobHours:sum(jr,'hours'),jobPay:sum(jr,'pay'),otHours:sum(ot,'hours'),regularHours:sum(ot,'regular'),overtimeHours:sum(ot,'ot'),doubleHours:sum(ot,'double')};
+}
+function summaryHtml(){
+  const p=expectedPayrollStraightRows(),pr=expectedPayrollRscRows(),ce=expectedCashEmployeeRows(),jobs=expectedJobDetailRows(),ot=expectedOvertimeRows(),ctl=expectedControlTotals();
+  const block=(title,headers,rows)=>`<div style="margin-bottom:16px"><h3 style="margin:0 0 6px">${esc(title)}</h3>${tableHtml(headers,rows)}</div>`;
+  let html='<div class="two-col">';
+  html+='<div>'+block('Gusto Hours',['fullname','SUM of hours','SUM of total pay'],[...p.map(x=>[x.name,fmtCalc(x.hours),fmtCalc(x.pay)]),['Grand Total',fmtCalc(ctl.payrollHours),fmtCalc(ctl.payrollPay)]])+'</div>';
+  html+='<div>'+block('RSC Hours — Payroll Employees',['fullname','SUM of hours','SUM of total pay'],[...pr.map(x=>[x.name,fmtCalc(x.hours),fmtCalc(x.pay)]),['Grand Total',fmtCalc(ctl.payrollRscHours),fmtCalc(ctl.payrollRscPay)]])+block('RSC + Rest — Cash Employees',['fname','SUM of hours','SUM of total pay'],[...ce.map(x=>[x.name,fmtCalc(x.hours),fmtCalc(x.pay)]),['Grand Total',fmtCalc(ctl.cashHours),fmtCalc(ctl.cashPay)]])+'</div></div>';
+  html+=block('RSC/OF by Job',['jobcode_1','jobcode_2','SUM of hours','SUM of total pay'],jobs.map(x=>[x.job1,x.job2,fmtCalc(x.hours),fmtCalc(x.pay)]).concat([['Grand Total','',fmtCalc(ctl.jobHours),fmtCalc(ctl.jobPay)]]));
+  html+=block('Overtime hours',['fname','SUM of hours','SUM of Regular Hours','SUM of Overtime Hours','SUM of Double Hours'],ot.map(x=>[x.name,fmtCalc(x.hours),fmtCalc(x.regular),fmtCalc(x.ot),fmtCalc(x.double)]).concat([['Grand Total',fmtCalc(ctl.otHours),fmtCalc(ctl.regularHours),fmtCalc(ctl.overtimeHours),fmtCalc(ctl.doubleHours)]]));
+  html+=`<div class="note">Rest-break hours are added to checks as advised by the client. Lunch is excluded. RSC is removed from Gusto hours and paid separately. Only Job Code 1 controls payroll treatment; Job Code 2 is retained for the job-summary breakdown.</div>`;
+  return html;
+}
+
+function readiness(){if(!RESULT)return 'NOT READY — TIMESHEET REQUIRED';if(RESULT.review.some(x=>x.severity==='Blocking'))return 'BLOCKED — TECHNICAL REVIEW REQUIRED';if(!GUSTO_PREVIEW.uploaded)return 'NOT READY — GUSTO PREVIEW REQUIRED';if(GUSTO_PREVIEW.status==='BLOCKED'||GUSTO_PREVIEW.status==='MISMATCH')return 'BLOCKED — GUSTO PREVIEW MISMATCH';if(APPROVAL.status==='APPROVED')return 'APPROVED — READY FOR GUSTO';if(APPROVAL.status==='SENT BACK')return 'SENT BACK — CORRECTION REQUIRED';return 'READY — APPROVAL REQUIRED';}
+function renderApproval(){const st=readiness(),bl=RESULT?RESULT.review.filter(x=>x.severity==='Blocking').length:0;document.getElementById('approvalStats').innerHTML=`<div class="stat"><div class="n"><span class="badge ${st.includes('BLOCKED')?'b-bad':APPROVAL.status==='APPROVED'?'b-ok':'b-warn'}">${esc(st)}</span></div><div class="l">Status</div></div><div class="stat"><div class="n">${bl}</div><div class="l">Blocking items</div></div>`;document.getElementById('approvalReview').innerHTML=RESULT?tableHtml(['Employee','Rate','Paid Hours','Regular','OT','Double','Total Wages'],RESULT.payroll.employees.map(e=>[e.employeeName,e.rateLabel,fmtH(e.paidHours),fmtH(e.regularHours),fmtH(e.overtimeHours),fmtH(e.doubleHours),fmtM(e.totalWages)])):'';document.getElementById('approvalBox').className='ready-box '+(APPROVAL.status==='APPROVED'?'approval-ok':'');document.getElementById('approvalBox').innerHTML=APPROVAL.status==='APPROVED'?`<b>✓ APPROVED</b><div class="small">${new Date(APPROVAL.timestamp).toLocaleString()} — Gusto uploads are unlocked.</div>`:`<b>${esc(APPROVAL.status)}</b><div class="small">${esc(st)}</div>`;document.getElementById('approveBtn').disabled=APPROVAL.status==='APPROVED';const unlocked=APPROVAL.status==='APPROVED';document.getElementById('gustoFileInput').disabled=!unlocked;document.getElementById('biweeklyFileInput').disabled=!unlocked;document.getElementById('gustoUploadLabel').style.opacity=unlocked?'1':'.55';document.getElementById('biweeklyUploadLabel').style.opacity=unlocked?'1':'.55';}
+function approvePayroll(){if(readiness()!=='READY — APPROVAL REQUIRED'){alert('Resolve blocking items before approval.');return;}const warnings=RESULT.review.filter(x=>x.severity!=='Blocking').length;if(warnings&&!confirm(`There are ${warnings} warning(s). Approve anyway?`))return;APPROVAL={status:'APPROVED',timestamp:new Date().toISOString()};renderAll();}
+function sendBack(){APPROVAL={status:'SENT BACK',timestamp:new Date().toISOString()};renderAll();}
+function syncButtons(){
+  const ok=APPROVAL.status==='APPROVED';
+  ['downloadBtn','auditBtn','cashBtn','otBtn'].forEach(id=>document.getElementById(id).disabled=!ok);
+  const wg=document.getElementById('weeklyGustoDownloadBtn'),bg=document.getElementById('biweeklyGustoDownloadBtn');
+  const wTax=validateRequiredEmployeeTaxes('Weekly').ok,bTax=validateRequiredEmployeeTaxes('Biweekly').ok;
+  if(wg)wg.disabled=!(ok&&GUSTO.uploaded&&wTax);
+  if(bg)bg.disabled=!(ok&&BIWEEKLY.uploaded&&bTax);
+  document.getElementById('downloadHint').textContent=!ok
+    ?'Downloads unlock after approval.'
+    :GUSTO.uploaded||BIWEEKLY.uploaded
+      ?'Approved. Post-Gusto downloads unlock only when the matching period and required employee-tax detail are complete.'
+      :'Approved. Upload the matching Gusto GL to generate the post-payroll weekly/biweekly workbook.';
+}
+
+function parseLedger(matrix,sheetName){let hr=-1;for(let r=0;r<Math.min(matrix.length,50);r++){const h=(matrix[r]||[]).map(normalizeHeader);if(h.includes('account type')&&h.includes('account description')&&h.includes('debit')&&h.includes('credit')){hr=r;break;}}if(hr<0)return {error:'Ledger header not found',rows:[]};const hdr=matrix[hr].map(normalizeHeader),idx={};hdr.forEach((h,i)=>idx[h]=i);const rows=[];for(let r=hr+1;r<matrix.length;r++){const v=matrix[r]||[],type=String(v[idx['account type']]??'').trim(),desc=String(v[idx['account description']]??'').trim();if(!type&&normalizeHeader(desc)==='totals')break;if(!type&&!desc)continue;rows.push({sourceRow:r+1,type,desc,debit:safeNumber(v[idx.debit]),credit:safeNumber(v[idx.credit])});}return {sheetName,rows};}
+function wageEmployee(desc){const m=String(desc).match(/(?:Regular|Overtime|Double[- ]?Time|Sick Time Off) Wages? for (.+)$/i)||String(desc).match(/Sick Time Off for (.+)$/i)||String(desc).match(/Additional Earnings for (.+)$/i);return m?m[1].trim():null;}
+function parsePayrollActual(basic,detailed){
+  const b=basic?.rows||[],d=detailed?.rows||[],nt=r=>normalizeHeader(r.type),
+    sum=(rows,pred,side='debit')=>roundMoney(rows.filter(pred).reduce((a,r)=>a+(Number(r[side])||0),0));
+  const actual={
+    regularWages:sum(b,r=>nt(r)==='regularwages'),
+    overtimeWages:sum(b,r=>nt(r)==='overtimewages'),
+    doubleWages:sum(b,r=>/double/.test(nt(r))&&/wage/.test(nt(r))),
+    sickTime:sum(b,r=>nt(r)==='sicktimeoff'),
+    additionalEarnings:sum(b,r=>nt(r)==='nonequityearning'||/additional earning/.test(normalizeHeader(r.desc))),
+    employerTax:sum(b,r=>nt(r)==='employerficatax'||nt(r)==='employermedicaretax'),
+    netPay:sum(b,r=>nt(r)==='debitnetpay','credit'),
+    debitTax:sum(b,r=>nt(r)==='debittax','credit'),
+    employeeChecks:sum(b,r=>nt(r)==='employeepaymentcheck','credit'),
+    deductions:sum(b,r=>nt(r)==='garnishment','credit'),
+    totalDebit:roundMoney(b.reduce((a,r)=>a+(Number(r.debit)||0),0)),
+    totalCredit:roundMoney(b.reduce((a,r)=>a+(Number(r.credit)||0),0))
+  };
+  actual.balanced=Math.abs(actual.totalDebit-actual.totalCredit)<=0.01;
+  const em=new Map(),order=[];
+  for(const r of d){
+    const t=nt(r);
+    if(['regularwages','overtimewages','sicktimeoff','nonequityearning'].includes(t)||/double/.test(t)){
+      const name=wageEmployee(r.desc);
+      if(!name)continue;
+      const k=normalizeName(name);
+      if(!em.has(k)){
+        em.set(k,{employeeName:name,regular:0,ot:0,double:0,sick:0,additional:0,employerTax:null});
+        order.push(k);
+      }
+      const e=em.get(k);
+      if(t==='regularwages')e.regular+=Number(r.debit)||0;
+      else if(t==='overtimewages')e.ot+=Number(r.debit)||0;
+      else if(t==='sicktimeoff')e.sick+=Number(r.debit)||0;
+      else if(t==='nonequityearning')e.additional+=Number(r.debit)||0;
+      else e.double+=Number(r.debit)||0;
+    }
+  }
+  const fica=d.filter(r=>nt(r)==='employerficatax'),medi=d.filter(r=>nt(r)==='employermedicaretax'),
+    valid=order.length>0&&fica.length===order.length&&medi.length===order.length;
+  if(valid)order.forEach((k,i)=>em.get(k).employerTax=roundMoney((Number(fica[i].debit)||0)+(Number(medi[i].debit)||0)));
+  return {
+    actual,employeeMap:em,order,taxValid:valid,
+    taxMessage:`Employees ${order.length}; FICA rows ${fica.length}; Medicare rows ${medi.length}. ${valid?'Employer tax matched by employee order across FICA and Medicare blocks.':'Employer tax cannot be safely assigned by employee.'}`
+  };
+}
+function buildComparison(){if(standalone())return {rows:[],passed:true,standalone:true};const rows=[],used=new Set();for(const e of RESULT.payroll.employees){const target=aliasTarget(e.employeeName),g=GUSTO.employeeActual.get(normalizeName(target)),reasons=[];if(!g)reasons.push('PREPARED EMPLOYEE NOT FOUND IN GUSTO');else used.add(normalizeName(target));const pReg=e.regularPay??0,pOT=e.overtimePay??0,pD=e.doublePay??0,gReg=g?roundMoney(g.regular):null,gOT=g?roundMoney(g.ot):null,gD=g?roundMoney(g.double):null;if(g&&Math.abs(pReg-gReg)>0.01)reasons.push('REGULAR MISMATCH');if(g&&Math.abs(pOT-gOT)>0.01)reasons.push('OT MISMATCH');if(g&&Math.abs(pD-gD)>0.01)reasons.push('DOUBLE MISMATCH');rows.push({prepared:e.employeeName,gusto:target,pReg,gReg,pOT,gOT,pD,gD,regDiff:g?roundMoney(pReg-gReg):null,otDiff:g?roundMoney(pOT-gOT):null,doubleDiff:g?roundMoney(pD-gD):null,status:reasons.length?'MISMATCH':'MATCH',reason:reasons.join('; ')});}for(const [k,g] of GUSTO.employeeActual)if(!used.has(k))rows.push({prepared:'—',gusto:g.employeeName,pReg:null,gReg:roundMoney(g.regular),pOT:null,gOT:roundMoney(g.ot),pD:null,gD:roundMoney(g.double),status:'MISMATCH',reason:'GUSTO EMPLOYEE NOT FOUND IN PREPARED PAYROLL'});return {rows,passed:rows.length>0&&rows.every(r=>r.status==='MATCH')};}
+function parseWcSource(matrix){const out=[];for(let r=0;r<(matrix||[]).length;r++){const row=matrix[r]||[],code=safeNumber(row[4]),rate=safeNumber(row[10]);if(code!=null&&rate!=null)out.push({code:String(Math.trunc(code)),rate});}return out;}
+function parseHzRates(matrix){const out=[];for(let r=0;r<(matrix||[]).length;r++){const row=matrix[r]||[];for(let c=0;c<row.length;c++){const m=String(row[c]??'').match(/code\s*(\d{4})/i);if(m){let rate=null;for(let j=c-1;j>=0;j--){const n=safeNumber(row[j]);if(n!=null){rate=n;break;}}if(rate!=null)out.push({code:m[1],rate});}}}return out;}
+function buildWcAndSpecial(){const employeeRows=[],groups=new Map(),warnings=[];for(const [k,e] of GUSTO.employeeActual){const code=WC_EMPLOYEE_MAP[k];if(!code){warnings.push(`WC code not mapped for ${e.employeeName}`);continue;}const rate=wcRate(code),reg=e.regular+e.sick,ot=e.ot+e.double,otBasis=ot*2/3,basis=reg+otBasis,wc=rate==null?null:basis*rate;employeeRows.push({name:e.employeeName,code,regular:reg,ot,otBasis,basis,rate,wc});if(!groups.has(code))groups.set(code,{code,regular:0,ot:0,otBasis:0,basis:0,rate,wc:0});const g=groups.get(code);g.regular+=reg;g.ot+=ot;g.otBasis+=otBasis;g.basis+=basis;g.wc+=wc||0;}const sourceWc=new Map((GUSTO.sourceWc||[]).map(x=>[x.code,x.rate])),hz=new Map(parseHzRates(GUSTO.hzMatrix).map(x=>[x.code,x.rate]));const validation=[...new Set([...wcRateRows.map(x=>String(x.code)),...sourceWc.keys(),...hz.keys()])].sort().map(code=>{const cfg=wcRate(code),w=sourceWc.get(code)??null,h=hz.get(code)??null;const conflict=w!=null&&h!=null&&Math.abs(w-h)>1e-12,diff=cfg!=null&&((w!=null&&Math.abs(cfg-w)>1e-12)||(h!=null&&Math.abs(cfg-h)>1e-12));return {code,configured:cfg,wc:w,hz:h,status:conflict?'SOURCE CONFLICT — REVIEW':diff?'CONFIGURATION DIFFERS — REVIEW':'OK'};});const special=[];for(const [k,e] of GUSTO.employeeActual){const rule=SPECIAL_RULES[k];if(!rule)continue;const rate=wcRate(rule.wcCode),wages=e.regular+e.ot+e.double+e.sick,exempt=(e.ot+e.double)/3,otAfter=(e.ot+e.double)-exempt,basis=e.regular+e.sick+otAfter,wc=rate==null?null:basis*rate,tax=GUSTO.taxAssignmentValid?e.employerTax:null,subtotal=tax==null||wc==null?null:wages+tax+wc,fee=subtotal==null?null:subtotal*rule.feePct/100,total=subtotal==null?null:subtotal+fee,allocations=rule.allocations.map(([label,pct])=>({label,pct,total:total==null?null:total*pct/100}));special.push({employee:e.employeeName,...rule,wages,employerTax:tax,exempt,otAfter,basis,wcRate:rate,wc,subtotal,fee,total,allocations});}return {employeeRows,groups:Array.from(groups.values()),validation,special,warnings};}
+
+function previewApprox(a,b,t=0.02){return a!=null&&b!=null&&Math.abs(Number(a)-Number(b))<=t;}
+// Groups pdf.js text items into visual rows using their y-position, then reconstructs each row's
+// text left-to-right. This mirrors how the report is actually laid out (many columns per visual
+// row) instead of relying on pdf.js's raw item order, which does not follow reading order for
+// multi-column reports like this payroll journal.
+async function extractPdfRows(pdf){
+  const rows=[];
+  for(let p=1;p<=pdf.numPages;p++){
+    const page=await pdf.getPage(p);
+    const content=await page.getTextContent();
+    const items=content.items.filter(it=>it.str&&it.str.trim()!=='').map(it=>({x:it.transform[4],y:it.transform[5],str:it.str}));
+    items.sort((a,b)=>b.y-a.y||a.x-b.x);
+    let current=null,rowY=null;
+    for(const it of items){
+      if(current===null||Math.abs(it.y-rowY)>2){current={items:[],page:p};rows.push(current);rowY=it.y;}
+      current.items.push(it);
+    }
+  }
+  return rows.map(r=>{
+    const sorted=r.items.slice().sort((a,b)=>a.x-b.x);
+    const leftItems=sorted.filter(i=>i.x<88); // Employee Info column only; Employment Type starts at x≈89.4
+    // In Gusto paystubs the employee-side tax table occupies the left half of the page
+    // (Employer Tax begins around x≈301). Keep x<290 as a safe employee-only slice.
+    const employeeTaxItems=sorted.filter(i=>i.x<290);
+    return {
+      text:sorted.map(i=>i.str).join(' '),
+      leftText:leftItems.map(i=>i.str).join(' ').trim(),
+      employeeTaxText:employeeTaxItems.map(i=>i.str).join(' ').trim(),
+      page:r.page||1
+    };
+  });
+}
+// Walks the reconstructed rows top-to-bottom, using the leftmost (Employee Info) column to detect
+// each employee's "Lastname(s), Firstname" block start — including names that wrap across rows —
+// then attributes any Regular/Overtime/Double hours found on rows belonging to that block.
+function parseGustoPreviewRows(rows){
+  const employees=new Map();
+  let current=null,pendingLastName=false;
+  const finalize=()=>{
+    if(current&&current.lastName){
+      const name=`${current.firstName||''} ${current.lastName}`.trim();
+      const key=normalizeName(name);
+      if(!employees.has(key))employees.set(key,{employeeName:name,regularHours:0,overtimeHours:0,doubleHours:0});
+      const e=employees.get(key);
+      e.regularHours+=current.regularHours||0;e.overtimeHours+=current.overtimeHours||0;e.doubleHours+=current.doubleHours||0;
+    }
+  };
+  for(const row of rows){
+    if(/^payroll totals\b/i.test(row.text.trim())){finalize();current=null;break;}
+    const lt=row.leftText;
+    const full=lt.match(/^([A-Z][A-Za-z'\-]*(?:\s[A-Z][A-Za-z'\-]*)*),\s*([A-Z][a-z'\-]+)$/);
+    const lastOnly=!full&&lt.match(/^([A-Z][A-Za-z'\-]*(?:\s[A-Z][A-Za-z'\-]*)*),$/);
+    if(full){finalize();current={firstName:full[2],lastName:full[1],regularHours:0,overtimeHours:0,doubleHours:0};pendingLastName=false;}
+    else if(lastOnly){finalize();current={firstName:null,lastName:lastOnly[1],regularHours:0,overtimeHours:0,doubleHours:0};pendingLastName=true;}
+    else if(pendingLastName&&current&&!current.firstName){
+      const fn=lt.match(/^([A-Z][a-z'\-]+)$/);
+      if(fn){current.firstName=fn[1];pendingLastName=false;}
+    }
+    if(current){
+      let rm;
+      if((rm=row.text.match(/\bRegular\s+([\d.]+)/i)))current.regularHours+=Number(rm[1])||0;
+      if((rm=row.text.match(/\bOvertime\s+([\d.]+)/i)))current.overtimeHours+=Number(rm[1])||0;
+      if((rm=row.text.match(/\bDouble(?:\s*Time)?\s+([\d.]+)/i)))current.doubleHours+=Number(rm[1])||0;
+    }
+  }
+  finalize();
+  return employees;
+}
+async function loadGustoPreview(file){
+  GUSTO_PREVIEW=emptyGustoPreview();GUSTO_PREVIEW.uploaded=true;GUSTO_PREVIEW.fileName=file.name;
+  document.getElementById('gustoPreviewStatus').textContent='Parsing preview PDF...';
+  try{
+    const ab=await file.arrayBuffer(); const pdf=await pdfjsLib.getDocument({data:ab}).promise;
+    const rows=await extractPdfRows(pdf);
+    const fullText=rows.map(r=>r.text).join(' ');
+    const period=fullText.match(/(\d{2}\/\d{2}\/\d{4})\s*-\s*(\d{2}\/\d{2}\/\d{4})/);
+    if(period)GUSTO_PREVIEW.period={start:period[1],end:period[2]};
+    GUSTO_PREVIEW.employees=parseGustoPreviewRows(rows);
+    if(GUSTO_PREVIEW.employees.size===0)GUSTO_PREVIEW.blockingIssues.push('No employees could be identified in this PDF. The report layout may differ from what this tool expects — check the file or add rows manually below.');
+    GUSTO_PREVIEW.status='PARSED';
+    compareGustoPreview();
+  }catch(e){GUSTO_PREVIEW.status='BLOCKED';GUSTO_PREVIEW.blockingIssues.push(e.message);}
+  renderGustoPreview();renderApproval();
+}
+function previewEmployeeKey(n){return normalizeName(aliasTarget(n));}
+function compareGustoPreview(){
+  if(!GUSTO_PREVIEW.reviewNotes)GUSTO_PREVIEW.reviewNotes=new Map();
+  const rows=[],used=new Set();
+  for(const e of RESULT.payroll.employees){
+    const key=previewEmployeeKey(e.employeeName);
+    const g=GUSTO_PREVIEW.employees.get(key);
+    let reasons=[];
+    if(!g)reasons.push('MISSING FROM GUSTO PREVIEW');
+    else{used.add(key);if(!previewApprox(e.regularHours,g.regularHours))reasons.push('REGULAR HOURS MISMATCH');if(!previewApprox(e.overtimeHours,g.overtimeHours))reasons.push('OT HOURS MISMATCH');}
+    const rn=GUSTO_PREVIEW.reviewNotes.get(key);
+    rows.push({key,employee:e.employeeName,gusto:g?g.employeeName:'—',prepReg:e.regularHours,prepOT:e.overtimeHours,gustoReg:g?g.regularHours:null,gustoOT:g?g.overtimeHours:null,gustoDouble:g?g.doubleHours:null,hasGusto:!!g,status:reasons.length?'MISMATCH':'MATCH',reason:reasons.join('; '),reviewed:!!rn?.reviewed,note:rn?.note||''});
+  }
+  for(const [k,g] of GUSTO_PREVIEW.employees){
+    if(!used.has(k)){
+      const rn=GUSTO_PREVIEW.reviewNotes.get(k);
+      rows.push({key:k,employee:'—',gusto:g.employeeName,prepReg:null,prepOT:null,gustoReg:g.regularHours,gustoOT:g.overtimeHours,gustoDouble:g.doubleHours,hasGusto:true,status:'REVIEW REQUIRED',reason:'UNEXPECTED GUSTO EMPLOYEE',reviewed:!!rn?.reviewed,note:rn?.note||''});
+    }
+  }
+  const unresolved=rows.filter(x=>x.status!=='MATCH'&&!x.reviewed);
+  GUSTO_PREVIEW.comparison={rows,passed:rows.length>0&&rows.every(x=>x.status==='MATCH')};
+  GUSTO_PREVIEW.status=GUSTO_PREVIEW.comparison.passed?'MATCHED':(unresolved.length?'MISMATCH':'REVIEWED — DIFFERENCES NOTED');
+}
+function updatePreviewHours(key,field,value){
+  const e=GUSTO_PREVIEW.employees.get(key);if(!e)return;
+  const n=safeNumber(value);e[field]=n==null?0:n;
+  compareGustoPreview();renderGustoPreview();renderApproval();
+}
+function setPreviewReviewed(key,checked){
+  if(!GUSTO_PREVIEW.reviewNotes)GUSTO_PREVIEW.reviewNotes=new Map();
+  const cur=GUSTO_PREVIEW.reviewNotes.get(key)||{reviewed:false,note:''};
+  GUSTO_PREVIEW.reviewNotes.set(key,{...cur,reviewed:checked});
+  compareGustoPreview();renderGustoPreview();renderApproval();
+}
+function setPreviewNote(key,note){
+  if(!GUSTO_PREVIEW.reviewNotes)GUSTO_PREVIEW.reviewNotes=new Map();
+  const cur=GUSTO_PREVIEW.reviewNotes.get(key)||{reviewed:false,note:''};
+  GUSTO_PREVIEW.reviewNotes.set(key,{...cur,note});
+  compareGustoPreview();renderGustoPreview();
+}
+function addManualPreviewEmployee(key,name){
+  if(!GUSTO_PREVIEW.employees.has(key))GUSTO_PREVIEW.employees.set(key,{employeeName:name,regularHours:0,overtimeHours:0,doubleHours:0});
+  compareGustoPreview();renderGustoPreview();renderApproval();
+}
+function renderGustoPreview(){
+  const s=document.getElementById('gustoPreviewSummary'),c=document.getElementById('gustoPreviewComparison'),dlBtn=document.getElementById('downloadPreviewReviewBtn');
+  if(!s)return;
+  const okClass=GUSTO_PREVIEW.status==='MATCHED'?' approval-ok':'';
+  s.innerHTML=`<div class="ready-box${okClass}"><b>${esc(GUSTO_PREVIEW.status)}</b><div class="small">${esc(GUSTO_PREVIEW.fileName||'')}${GUSTO_PREVIEW.period?' &nbsp;•&nbsp; '+esc(GUSTO_PREVIEW.period.start)+' to '+esc(GUSTO_PREVIEW.period.end):''}</div></div>`;
+  if(!GUSTO_PREVIEW.comparison){
+    c.innerHTML='';
+    if(document.getElementById('gustoPreviewStatus'))document.getElementById('gustoPreviewStatus').textContent=GUSTO_PREVIEW.status;
+    if(dlBtn)dlBtn.disabled=true;
+    return;
+  }
+  const rows=GUSTO_PREVIEW.comparison.rows;
+  let h='<div class="hint" style="margin-top:10px">If the PDF text was parsed incorrectly, edit the Gusto Regular/OT/Double hours directly below — the comparison recalculates automatically. Check "Reviewed" once you\'ve confirmed a remaining difference is expected, and add a note explaining why. Then use Download Preview Review to save a record of what was checked.</div>';
+  h+='<div class="overflow" style="margin-top:8px"><table><tr><th>Prepared Employee</th><th>Prepared Reg</th><th>Prepared OT</th><th>Gusto Employee</th><th>Gusto Reg</th><th>Gusto OT</th><th>Gusto Double</th><th>Status</th><th>Reason</th><th>Reviewed</th><th>Note</th></tr>';
+  for(const r of rows){
+    const rowProblem=r.status!=='MATCH'&&!r.reviewed;
+    const badge=r.status==='MATCH'?'b-ok':(r.reviewed?'b-warn':'b-bad');
+    h+=`<tr class="${rowProblem?'problem':''}">`;
+    h+=`<td>${esc(r.employee)}</td>`;
+    h+=`<td>${r.prepReg==null?'—':round2(r.prepReg)}</td>`;
+    h+=`<td>${r.prepOT==null?'—':round2(r.prepOT)}</td>`;
+    h+=`<td>${esc(r.gusto)}</td>`;
+    if(r.hasGusto){
+      h+=`<td><input type="number" step="0.01" min="0" style="width:80px" value="${r.gustoReg??0}" onchange="updatePreviewHours('${escAttr(r.key)}','regularHours',this.value)"></td>`;
+      h+=`<td><input type="number" step="0.01" min="0" style="width:80px" value="${r.gustoOT??0}" onchange="updatePreviewHours('${escAttr(r.key)}','overtimeHours',this.value)"></td>`;
+      h+=`<td><input type="number" step="0.01" min="0" style="width:80px" value="${r.gustoDouble??0}" onchange="updatePreviewHours('${escAttr(r.key)}','doubleHours',this.value)"></td>`;
+    }else{
+      h+=`<td colspan="3"><button onclick="addManualPreviewEmployee('${escAttr(r.key)}','${escAttr(r.employee)}')">+ Add Gusto hours</button></td>`;
+    }
+    h+=`<td><span class="badge ${badge}">${esc(r.status)}</span></td>`;
+    h+=`<td>${esc(r.reason)}</td>`;
+    h+=`<td style="text-align:center"><input type="checkbox" ${r.reviewed?'checked':''} ${r.status==='MATCH'?'disabled':''} onchange="setPreviewReviewed('${escAttr(r.key)}',this.checked)"></td>`;
+    h+=`<td><input type="text" placeholder="Reason / who approved the difference" style="width:220px" value="${escAttr(r.note)}" onchange="setPreviewNote('${escAttr(r.key)}',this.value)"></td>`;
+    h+='</tr>';
+  }
+  h+='</table></div>';
+  c.innerHTML=h;
+  if(document.getElementById('gustoPreviewStatus'))document.getElementById('gustoPreviewStatus').textContent=GUSTO_PREVIEW.status;
+  if(dlBtn)dlBtn.disabled=false;
+}
+function downloadGustoPreviewReview(){
+  if(!GUSTO_PREVIEW.uploaded||!GUSTO_PREVIEW.comparison){alert('Upload and parse a Gusto preview PDF first.');return;}
+  const wb=XLSX.utils.book_new();
+  const rows=GUSTO_PREVIEW.comparison.rows;
+  append(wb,[
+    ['Prepared Employee','Prepared Regular','Prepared OT','Gusto Employee','Gusto Regular','Gusto OT','Gusto Double','Status','Reason','Reviewed','Note'],
+    ...rows.map(r=>[r.employee,r.prepReg??'',r.prepOT??'',r.gusto,r.gustoReg??'',r.gustoOT??'',r.gustoDouble??'',r.status,r.reason,r.reviewed?'YES':'NO',r.note])
+  ],'Gusto Preview Review',[24,15,13,24,13,13,13,22,32,10,40]);
+
+  append(wb,[
+    ['Review Summary','Value'],
+    ['Source PDF',GUSTO_PREVIEW.fileName||''],
+    ['Payroll Period',GUSTO_PREVIEW.period?`${GUSTO_PREVIEW.period.start} to ${GUSTO_PREVIEW.period.end}`:''],
+    ['Review Status',GUSTO_PREVIEW.status],
+    ['Total Comparison Rows',rows.length],
+    ['Matched Rows',rows.filter(r=>r.status==='MATCH').length],
+    ['Mismatch Rows',rows.filter(r=>r.status!=='MATCH').length],
+    ['Reviewed Differences',rows.filter(r=>r.reviewed).length],
+    ['Generated At',new Date().toISOString()]
+  ],'Review Summary',[28,45]);
+
+  append(wb,[
+    ['Employee','Prepared Regular','Prepared OT','Gusto Regular','Gusto OT','Gusto Double','Status','Review Completed','Reviewer Note'],
+    ...rows.map(r=>[r.employee,r.prepReg??'',r.prepOT??'',r.gustoReg??'',r.gustoOT??'',r.gustoDouble??'',r.status,r.reviewed?'YES':'NO',r.note||''])
+  ],'Detailed Review',[24,16,16,16,16,16,18,18,45]);
+  const periodLabel=(GUSTO_PREVIEW.period?`${GUSTO_PREVIEW.period.start} to ${GUSTO_PREVIEW.period.end}`:(RESULT?.period?`${RESULT.period.start} to ${RESULT.period.end}`:'period')).replace(/\//g,'-');
+  XLSX.writeFile(wb,`Gusto_Preview_Review_${periodLabel}.xlsx`);
+}
+
+function loadGusto(f){const rd=new FileReader();rd.onload=e=>{try{const wb=XLSX.read(e.target.result,{type:'array',cellDates:true,cellStyles:true}),find=n=>wb.SheetNames.find(s=>normalizeHeader(s)===normalizeHeader(n)),basicName=find('Basic'),detName=find('Detailed');if(!basicName||!detName)throw new Error('Basic and Detailed sheets are required.');const matrices={};for(const n of wb.SheetNames)matrices[n]=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,defval:'',raw:true});const glPeriod=extractGlPeriod(matrices);validateRegularGlPeriod(glPeriod);const parsed=parsePayrollActual(parseLedger(matrices[basicName],basicName),parseLedger(matrices[detName],detName));clearEmployeeTaxScope('Weekly');GUSTO=emptyGusto();GUSTO.uploaded=true;GUSTO.fileName=f.name;GUSTO.period=glPeriod;GUSTO.sourceWorkbook=wb;GUSTO.actual=parsed.actual;GUSTO.employeeActual=parsed.employeeMap;extractTaxFromCompletedSpecialSheets('Weekly',matrices,GUSTO.employeeActual);GUSTO.taxAssignmentValid=parsed.taxValid;GUSTO.taxMessage=parsed.taxMessage;const wcName=find('WC'),hzName=find('Hz & El')||find('HZ & EL');GUSTO.wcMatrix=wcName?matrices[wcName]:null;GUSTO.hzMatrix=hzName?matrices[hzName]:null;GUSTO.sourceWc=parseWcSource(GUSTO.wcMatrix);GUSTO.comparison=buildComparison();GUSTO.wcCalc=buildWcAndSpecial();GUSTO.special=GUSTO.wcCalc.special;const sourceWarnings=GUSTO.wcCalc.validation.filter(x=>x.status!=='OK').map(x=>`WC ${x.code}: ${x.status}`);GUSTO.warnings=[...GUSTO.wcCalc.warnings,...sourceWarnings];if(!GUSTO.actual.balanced)GUSTO.warnings.push('Basic sheet debit and credit totals do not balance.');if(!GUSTO.taxAssignmentValid)GUSTO.warnings.push(GUSTO.taxMessage);GUSTO.status=!GUSTO.comparison.passed?'REVIEW REQUIRED':GUSTO.warnings.length?'WAGES MATCHED — WC/SPECIAL REVIEW':'MATCHED — WAGES RECONCILED';document.getElementById('gustoStatus').textContent=`Loaded ${f.name}. Period ${GUSTO.period.start} to ${GUSTO.period.end}. ${GUSTO.status}`;afterGustoChange();}catch(err){GUSTO=emptyGusto();GUSTO.status='BLOCKED — '+err.message;document.getElementById('gustoStatus').textContent=GUSTO.status;afterGustoChange();}};rd.readAsArrayBuffer(f);}
+function loadBiweekly(f){const rd=new FileReader();rd.onload=e=>{try{const wb=XLSX.read(e.target.result,{type:'array',cellDates:true,cellStyles:true}),find=n=>wb.SheetNames.find(s=>normalizeHeader(s)===normalizeHeader(n)),bn=find('Basic'),dn=find('Detailed');if(!bn||!dn)throw new Error('Basic and Detailed sheets required.');const matrices={};for(const n of wb.SheetNames)matrices[n]=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,defval:'',raw:true});const glPeriod=extractGlPeriod(matrices);validateBiweeklyGlPeriod(glPeriod);const bm=matrices[bn],dm=matrices[dn],p=parsePayrollActual(parseLedger(bm,bn),parseLedger(dm,dn));clearEmployeeTaxScope('Biweekly');BIWEEKLY=emptyBiweekly();BIWEEKLY.uploaded=true;BIWEEKLY.fileName=f.name;BIWEEKLY.period=glPeriod;BIWEEKLY.sourceWorkbook=wb;BIWEEKLY._actual=p.actual;BIWEEKLY.employeeActual=p.employeeMap;extractTaxFromCompletedSpecialSheets('Biweekly',matrices,BIWEEKLY.employeeActual);for(const [k,e] of p.employeeMap){const rule=BIWEEKLY_RULES[k];if(!rule)continue;const rate=wcRate(rule.wcCode),wages=e.regular+e.ot+e.double+e.sick,glTax=p.taxValid?e.employerTax:null,tax=glTax!=null?glTax:roundMoney(wages*0.0765),wc=rate==null?null:wages*rate,subtotal=tax==null||wc==null?null:wages+tax+wc,fee=subtotal==null?null:subtotal*rule.feePct/100,total=subtotal==null?null:subtotal+fee,allocations=rule.allocations.map(([label,pct])=>({label,pct,wages:wages*pct/100,tax:tax==null?null:tax*pct/100,wc:wc==null?null:wc*pct/100,fee:fee==null?null:fee*pct/100,total:total==null?null:total*pct/100}));BIWEEKLY.rows.push({employee:e.employeeName,...rule,wages,tax,glTax,wcRate:rate,wc,subtotal,fee,total,allocations});if(glTax==null)BIWEEKLY.warnings.push(`${e.employeeName}: Detailed GL employer tax could not be assigned; 7.65% estimate ${fmtM(tax)} used.`);}BIWEEKLY.status=BIWEEKLY.rows.length?'CALCULATED':'REVIEW REQUIRED';if(!p.taxValid)BIWEEKLY.warnings.push(p.taxMessage);document.getElementById('biweeklyStatus').textContent=`Loaded ${f.name}. Period ${BIWEEKLY.period.start} to ${BIWEEKLY.period.end}. ${BIWEEKLY.status}`;afterGustoChange();}catch(err){BIWEEKLY=emptyBiweekly();BIWEEKLY.status='BLOCKED — '+err.message;document.getElementById('biweeklyStatus').textContent=BIWEEKLY.status;afterGustoChange();}};rd.readAsArrayBuffer(f);}
+function renderGusto(){const st=document.getElementById('gustoStats'),box=document.getElementById('gustoBox');st.innerHTML=GUSTO.uploaded?`<div class="stat"><div class="n"><span class="badge ${GUSTO.comparison?.passed?'b-ok':'b-warn'}">${esc(GUSTO.status)}</span></div><div class="l">Regular Payroll</div></div><div class="stat"><div class="n">${GUSTO.actual.balanced?'YES':'NO'}</div><div class="l">Basic balanced</div></div><div class="stat"><div class="n">${GUSTO.taxAssignmentValid?'PASS':'REVIEW'}</div><div class="l">Employer tax mapping</div></div>`:'<div class="stat"><div class="n">NOT UPLOADED</div><div class="l">Regular payroll GL</div></div>';box.innerHTML=postPayrollHtml();}
+function postPayrollHtml(){if(!GUSTO.uploaded)return '<div class="ready-box"><b>Regular payroll GL not uploaded.</b></div>';let h='';if(GUSTO.warnings.length)h+=`<div class="note"><b>Warnings</b><br>${GUSTO.warnings.map(esc).join('<br>')}</div>`;if(GUSTO.comparison)h+=tableHtml(['Prepared Employee','Gusto Employee','Prepared Regular','Gusto Regular','Diff','Prepared OT','Gusto OT','Diff','Prepared Double','Gusto Double','Diff','Status','Reason'],GUSTO.comparison.rows.map(r=>[r.prepared,r.gusto,r.pReg==null?'—':fmtM(r.pReg),r.gReg==null?'—':fmtM(r.gReg),r.regDiff==null?'—':fmtM(r.regDiff),r.pOT==null?'—':fmtM(r.pOT),r.gOT==null?'—':fmtM(r.gOT),r.otDiff==null?'—':fmtM(r.otDiff),r.pD==null?'—':fmtM(r.pD),r.gD==null?'—':fmtM(r.gD),r.doubleDiff==null?'—':fmtM(r.doubleDiff),r.status,r.reason||'']));if(GUSTO.wcCalc){h+='<h3>WC Calculation</h3>'+tableHtml(['Code','Regular Pay','OT','2/3 OT for WC','WC Basis','Rate','WC'],GUSTO.wcCalc.groups.map(g=>[g.code,fmtM(g.regular),fmtM(g.ot),fmtM(g.otBasis),fmtM(g.basis),g.rate??'MISSING',fmtM(g.wc)]));h+='<h3>WC Source Validation</h3>'+tableHtml(['Code','Configured','WC Sheet','Hz & El Sheet','Status'],GUSTO.wcCalc.validation.map(x=>[x.code,x.configured??'—',x.wc??'—',x.hz??'—',x.status]));if(GUSTO.special.length)h+='<h3>Special Calculations</h3>'+tableHtml(['Employee','Rule','Wages','Employer Tax','1/3 OT Exempt','WC Basis','WC','Fee %','Fee','Invoice Total','Allocations'],GUSTO.special.map(x=>[x.employee,x.rule,fmtM(x.wages),x.employerTax==null?'BLOCKED':fmtM(x.employerTax),fmtM(x.exempt),fmtM(x.basis),x.wc==null?'MISSING':fmtM(x.wc),x.feePct,fmtM(x.fee),fmtM(x.total),x.allocations.map(a=>a.label+' '+a.pct+'%='+fmtM(a.total)).join('; ')]));}return h;}
+function biweeklyHtml(){if(!BIWEEKLY.uploaded)return '<div class="ready-box"><b>Biweekly payroll GL not uploaded.</b><div class="small">Separate 14-day cycle only; used for Meaghan/Ryan allocation calculations. Weekly and biweekly periods are never mixed.</div></div>';let h=BIWEEKLY.warnings.length?`<div class="note">${BIWEEKLY.warnings.map(esc).join('<br>')}</div>`:'';h+=tableHtml(['Employee','Wages','Employer Taxes (7.65%)','Detailed GL Tax','WC Code','WC Rate','WC','Subtotal','Service Fee %','Fee','Total Pay','Allocations'],BIWEEKLY.rows.map(x=>[x.employee,fmtM(x.wages),fmtM(x.tax),x.glTax==null?'—':fmtM(x.glTax),x.wcCode,x.wcRate,fmtM(x.wc),fmtM(x.subtotal),x.feePct,fmtM(x.fee),fmtM(x.total),x.allocations.map(a=>`${a.label} ${a.pct}% = ${fmtM(a.total)}`).join('; ')]));return h;}
+
+function loadRateFile(f){const ext=f.name.split('.').pop().toLowerCase(),finish=(matrix,label)=>{let hr=-1,ni=-1,ri=-1,noi=-1;for(let r=0;r<Math.min(30,matrix.length);r++){const h=(matrix[r]||[]).map(normalizeHeader);ni=h.findIndex(x=>['full name','employee','employee name','name'].includes(x));ri=h.findIndex(x=>['pay rate','rate','hourly rate','hourly rates'].includes(x));noi=h.findIndex(x=>['notes','note'].includes(x));if(ni>=0&&ri>=0){hr=r;break;}}if(hr<0)throw new Error('Rate file must contain Full Name and Pay Rate columns.');const next=[];for(let r=hr+1;r<matrix.length;r++){const name=String(matrix[r]?.[ni]??'').trim(),rate=safeNumber(matrix[r]?.[ri]);if(!name)continue;next.push({name,rate,notes:noi>=0?String(matrix[r]?.[noi]??'').trim():''});}if(!next.length)throw new Error('No rate rows found.');rateRows=next;drawRates();document.getElementById('rateFileStatus').textContent=`Loaded ${next.length} rates from ${label}.`;invalidate();};if(ext==='csv'){Papa.parse(f,{skipEmptyLines:false,complete:r=>{try{finish(r.data,f.name)}catch(e){document.getElementById('rateFileStatus').textContent=e.message;}}});}else{const rd=new FileReader();rd.onload=e=>{try{const wb=XLSX.read(e.target.result,{type:'array',cellDates:true}),sn=wb.SheetNames.find(n=>/hourly\s*rates?/i.test(n))||wb.SheetNames[0];finish(XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:'',raw:true}),f.name+' ('+sn+')');}catch(err){document.getElementById('rateFileStatus').textContent='Unable to read rate file: '+err.message;}};rd.readAsArrayBuffer(f);}}
+
+function aoaSheet(aoa,widths){const ws=XLSX.utils.aoa_to_sheet(aoa);ws['!cols']=(widths||Array(aoa[0]?.length||1).fill(16)).map(w=>({wch:w}));if(aoa.length)ws['!autofilter']={ref:`A1:${XLSX.utils.encode_col((aoa[0]?.length||1)-1)}${aoa.length}`};return ws;}
+function headerStyle(ws,lastCol){const style={fill:{fgColor:{rgb:'2F5D4C'}},font:{color:{rgb:'FFFFFF'},bold:true},alignment:{horizontal:'center'}};for(let c=0;c<=lastCol;c++){const a=XLSX.utils.encode_cell({r:0,c});if(ws[a])ws[a].s=style;}ws['!freeze']={xSplit:0,ySplit:1};}
+function append(wb,aoa,name,widths){const ws=aoaSheet(aoa,widths);headerStyle(ws,(aoa[0]?.length||1)-1);XLSX.utils.book_append_sheet(wb,ws,name);}
+function baseWorkbook(includeAudit=true){const wb=XLSX.utils.book_new(),s=RESULT.stats,p=RESULT.period;append(wb,[['Metric','Value'],['Payroll frequency',p.frequency],['Period',`${p.start} to ${p.end}`],['Raw timesheet hours',s.rawHours],['Lunch hours',s.lunchHours],['Payroll hours',s.payrollHours],['Cash hours',s.cashHours],['Regular hours',s.regularHours],['OT hours',s.overtimeHours],['Double hours',s.doubleHours],['Regular wages',s.regularPay],['OT wages',s.overtimePay],['Double wages',s.doublePay],['Prepared payroll wages',s.totalWages],['RSC cash total',RESULT.cashTotals.totalPay],['Approval',APPROVAL.status],['Regular GL period',GUSTO.period?`${GUSTO.period.start} to ${GUSTO.period.end}`:''],['Gusto status',GUSTO.status],['Biweekly GL period',BIWEEKLY.period?`${BIWEEKLY.period.start} to ${BIWEEKLY.period.end}`:''],['Biweekly status',BIWEEKLY.status]],'Summary',[32,24]);append(wb,[['fullname','fname','lname','local_date','local_day','hours','jobcode_1','jobcode_2','jobcode_3','location','route','payrate','straight pay'],...RESULT.dataRows.map(r=>[r.fullname,r.fname,r.lname,r.dateISO||r.local_date,r.local_day,r.hours,r.jobcode_1,r.jobcode_2,r.jobcode_3,r.location,r.route,r.payrate??'',r.totalPay??''])],'Data',[24,14,16,13,10,10,20,28,28,20,12,12,14]);append(wb,[['Employee','Paid Hours','Regular','OT','Double','Rate','Regular Pay','OT Pay','Double Pay','Fixed Pay','Total Wages'],...RESULT.payroll.employees.map(e=>[e.employeeName,round2(e.paidHours),round2(e.regularHours),round2(e.overtimeHours),round2(e.doubleHours),e.rateLabel,e.regularPay,e.overtimePay,e.doublePay,e.fixedPay??'',e.totalWages])],'Employee Payroll',[24,12,12,12,12,12,14,14,14,14,14]);append(wb,[['Employee','Date','Weekend OT','Paid Hours','Regular','OT','Double','Rate'],...RESULT.payroll.daily.map(d=>[d.employeeName,d.date,d.weekend?'YES':'NO',round2(d.paidHours),round2(d.regularHours),round2(d.overtimeHours),round2(d.doubleHours),d.rate??''])],'Daily Calculation',[24,13,12,12,12,12,12,12]);append(wb,[['Employee','Date','Total Paid Hours','Regular Hours','Overtime Hours','Double Hours','Rule'],...RESULT.payroll.daily.map(d=>[d.employeeName,d.date,round2(d.paidHours),round2(d.regularHours),round2(d.overtimeHours),round2(d.doubleHours),d.weekend?'Weekend OT':'Daily 8/12 rule'])],'Overtime Calculation',[24,13,16,14,14,14,18]);append(wb,[['Name','RSC hour','Rest Break Hours','Other Cash Hours','Total Hours','Rate','RSC Pay','Rest Break Pay','Other Cash Pay','Total Pay'],...RESULT.cashRows.map(r=>[r.fullname,round2(r.rscH),round2(r.restH),round2(r.otherH),round2(r.total),r.rateLabel,r.rscPay,r.restPay,r.otherPay,r.totalPay]),['Grand Total',RESULT.cashTotals.rscH,RESULT.cashTotals.restH,RESULT.cashTotals.otherH,RESULT.cashTotals.total,'',RESULT.cashTotals.rscPay,RESULT.cashTotals.restPay,RESULT.cashTotals.otherPay,RESULT.cashTotals.totalPay]],'RSC and REST',[24,13,17,17,13,12,14,14,14,14]);append(wb,[['Employee','Payroll Rest Hours','Cash Rest Hours','Total Rest Hours','Payroll Rest Pay','Cash Rest Pay','Total Rest Pay'],...RESULT.restRows.map(r=>[r.employee,round2(r.payrollHours),round2(r.cashHours),round2(r.totalHours),r.payrollPay,r.cashPay,r.totalPay])],'Rest Breaks',[24,18,16,16,17,16,16]);append(wb,[['Job Code 1','Rows','Total Hours','Payroll Hours','Cash Hours','Excluded Hours','Straight Pay'],...Array.from(RESULT.jobTotals.entries()).map(([k,j])=>[k,j.rows,round2(j.hours),round2(j.payrollHours),round2(j.cashHours),round2(j.excludedHours),roundMoney(j.straightPay)])],'Job Codes',[22,10,13,14,13,15,14]);append(wb,[['Full Name','Pay Rate','Notes'],...rateRows.map(r=>[r.name,r.rate,r.notes])],'Hourly Rates',[26,12,36]);append(wb,[['Full Name','Prior Rate','Use Through','Source'],...HISTORICAL_RATES.map(r=>[r.name,r.rate,r.until,r.source])],'Rate History',[26,12,14,42]);if(includeAudit){append(wb,[['Employee','Mode'],...employeeRows.map(r=>[r.name,r.mode])],'Employee Master',[26,14]);append(wb,[['Job Code 1','Category'],...jobRuleRows.map(r=>[r.code,r.category])],'Job Code Rules',[24,14]);append(wb,[['Row','Employee','Date','Hours','Job Code 1','Reason','Severity'],...RESULT.review.map(r=>[r.sourceRow,r.employee,r.date,r.hours,r.jobcode_1,r.reason,r.severity])],'Review',[10,24,13,10,20,55,12]);if(GUSTO.uploaded){append(wb,[['Prepared Employee','Gusto Employee','Prepared Regular','Gusto Regular','Regular Diff','Prepared OT','Gusto OT','OT Diff','Prepared Double','Gusto Double','Double Diff','Status','Reason'],...GUSTO.comparison.rows.map(r=>[r.prepared,r.gusto,r.pReg??'',r.gReg??'',r.regDiff??'',r.pOT??'',r.gOT??'',r.otDiff??'',r.pD??'',r.gD??'',r.doubleDiff??'',r.status,r.reason])],'Gusto Reconciliation',[24,28,16,16,14,14,14,14,16,16,14,12,34]);append(wb,[['Code','Regular Pay','OT','2/3 OT for WC','WC Basis','Rate','WC'],...GUSTO.wcCalc.groups.map(g=>[g.code,g.regular,g.ot,g.otBasis,g.basis,g.rate,g.wc])],'WC Calculation',[10,16,14,16,16,12,14]);append(wb,[['Employee','Rule','Wages','Employer Tax','WC Code','WC','Fee %','Fee','Invoice Total','Allocations'],...GUSTO.special.map(x=>[x.employee,x.rule,x.wages,x.employerTax??'',x.wcCode,x.wc??'',x.feePct,x.fee??'',x.total??'',x.allocations.map(a=>`${a.label} ${a.pct}%=${roundMoney(a.total)}`).join('; ')])],'Special Calculations',[24,18,14,16,10,14,10,14,16,40]);}if(BIWEEKLY.uploaded)append(wb,[['Employee','Wages','Employer Taxes','WC Code','WC Rate','WC','Subtotal','Fee %','Fee','Total Pay','Allocations'],...BIWEEKLY.rows.map(x=>[x.employee,x.wages,x.tax,x.wcCode,x.wcRate,x.wc,x.subtotal,x.feePct,x.fee,x.total,x.allocations.map(a=>`${a.label} ${a.pct}%=${roundMoney(a.total)}`).join('; ')])],'Biweekly Allocations',[24,14,16,10,12,14,14,10,14,14,40]);}return wb;}
+function expectedOutputWorkbook(){
+  // Client workbook is generated entirely from RESULT / configured masters.
+  // No employee hours, payroll totals or output values are hardcoded here.
+  const wb=XLSX.utils.book_new();
+  const ctl=expectedControlTotals();
+  const payroll=expectedPayrollStraightRows();
+  const payrollRsc=expectedPayrollRscRows();
+  const cashEmp=expectedCashEmployeeRows();
+  const jobs=expectedJobDetailRows();
+  const ot=expectedOvertimeRows();
+
+  const DARK='1F4E78', BLUE='4472C4', LIGHT='D9EAF7', VERYLIGHT='EAF2F8', WHITE='FFFFFF', GRID='B7C9D6';
+  const thin={style:'thin',color:{rgb:GRID}};
+  const sectionStyle={fill:{fgColor:{rgb:DARK}},font:{bold:true,color:{rgb:WHITE},sz:11},alignment:{horizontal:'left',vertical:'center'}};
+  const headerStyle={fill:{fgColor:{rgb:BLUE}},font:{bold:true,color:{rgb:WHITE}},alignment:{horizontal:'left',vertical:'center',wrapText:true},border:{top:thin,bottom:thin,left:thin,right:thin}};
+  const totalStyle={fill:{fgColor:{rgb:LIGHT}},font:{bold:true,color:{rgb:'1C231F'}},border:{top:thin,bottom:thin}};
+  const filterStyle={fill:{fgColor:{rgb:VERYLIGHT}},font:{bold:true,color:{rgb:'1C231F'}}};
+  const bodyBorder={border:{bottom:{style:'hair',color:{rgb:'D9E2F3'}}}};
+  const apply=(ws,addrs,style)=>addrs.forEach(addr=>{if(ws[addr])ws[addr].s=style;});
+  const styleRect=(ws,r1,c1,r2,c2,style)=>{for(let r=r1;r<=r2;r++)for(let c=c1;c<=c2;c++){const a=XLSX.utils.encode_cell({r:r-1,c:c-1});if(ws[a])ws[a].s={...(ws[a].s||{}),...style};}};
+  const asDate=(iso)=>{const m=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?new Date(Number(m[1]),Number(m[2])-1,Number(m[3])):iso;};
+
+  // ---------------- SUMMARY ----------------
+  // Layout mirrors the client's working workbook: four working tables plus OT summary.
+  const summaryRows=Math.max(40,30+ot.length);
+  const a=Array.from({length:summaryRows},()=>Array(14).fill(''));
+  const put=(r,c,v)=>{a[r-1][c-1]=v;};
+
+  // Gusto Hours — normal payroll work + payroll rest breaks; Lunch/RSC excluded.
+  put(1,2,'Gusto Hours');
+  put(2,2,'jobcode_1'); put(2,3,'(Multiple Items)  ▼');
+  put(5,2,'fullname'); put(5,3,'SUM of hours'); put(5,4,'SUM of total pay');
+  payroll.forEach((x,i)=>{put(6+i,2,x.name);put(6+i,3,x.hours);put(6+i,4,x.pay);});
+  let gustoTotalRow=6+payroll.length;
+  put(gustoTotalRow,2,'Grand Total'); put(gustoTotalRow,3,ctl.payrollHours); put(gustoTotalRow,4,ctl.payrollPay);
+  put(gustoTotalRow+1,2,'*The Rest break hours are added to checks as advised by the client.');
+
+  // Payroll employee RSC — separate cash payment (for example Paul when applicable).
+  put(1,6,'RSC Hours');
+  put(2,6,'fname'); put(2,7,'(Multiple Items)  ▼');
+  put(4,6,'jobcode_1'); put(4,7,'RSC');
+  put(7,6,'fullname'); put(7,7,'SUM of hours'); put(7,8,'SUM of total pay');
+  payrollRsc.forEach((x,i)=>{put(8+i,6,x.name);put(8+i,7,x.hours);put(8+i,8,x.pay);});
+  let payrollRscTotalRow=8+payrollRsc.length;
+  put(payrollRscTotalRow,6,'Grand Total'); put(payrollRscTotalRow,7,ctl.payrollRscHours); put(payrollRscTotalRow,8,ctl.payrollRscPay);
+
+  // CASH employees — RSC + related Rest Break only. Payroll employees are excluded dynamically by mode.
+  const cashFilterRow=Math.max(12,payrollRscTotalRow+3);
+  put(cashFilterRow,6,'jobcode_1'); put(cashFilterRow,7,'(Multiple Items)  ▼');
+  const cashHeaderRow=cashFilterRow+3;
+  put(cashHeaderRow,6,'fname'); put(cashHeaderRow,7,'SUM of hours'); put(cashHeaderRow,8,'SUM of total pay');
+  cashEmp.forEach((x,i)=>{put(cashHeaderRow+1+i,6,x.name.split(/\s+/)[0]);put(cashHeaderRow+1+i,7,x.hours);put(cashHeaderRow+1+i,8,x.pay);});
+  const cashTotalRow=cashHeaderRow+1+cashEmp.length;
+  put(cashTotalRow,6,'Grand Total'); put(cashTotalRow,7,ctl.cashHours); put(cashTotalRow,8,ctl.cashPay);
+
+  // RSC/OF by Job — detail + dynamic subtotal after every Job Code 1 group.
+  put(1,10,'RSC/OF by Job');
+  put(3,10,'jobcode_1'); put(3,11,'jobcode_2'); put(3,12,'SUM of hours'); put(3,13,'SUM of total pay');
+  let jr=4;
+  const jobGroups=[];
+  for(const x of jobs){let g=jobGroups.find(z=>z.job1===x.job1);if(!g){g={job1:x.job1,rows:[]};jobGroups.push(g);}g.rows.push(x);}
+  for(const g of jobGroups){
+    let gh=0,gp=0;
+    g.rows.forEach((x,idx)=>{put(jr,10,idx===0?g.job1:'');put(jr,11,x.job2);put(jr,12,x.hours);put(jr,13,x.pay);gh+=x.hours;gp+=x.pay;jr++;});
+    put(jr,10,`${g.job1} Total`);put(jr,12,calcValue(gh));put(jr,13,calcValue(gp));jr++;
+  }
+  const jobGrandRow=jr;
+  put(jobGrandRow,10,'Grand Total'); put(jobGrandRow,12,ctl.jobHours); put(jobGrandRow,13,ctl.jobPay);
+
+  // Overtime summary.
+  const otStart=24;
+  put(otStart,2,'Overtime hours');
+  put(otStart+2,2,'fname'); put(otStart+2,3,'SUM of hours'); put(otStart+2,4,'SUM of Regular Hours'); put(otStart+2,5,'SUM of Overtime Hours'); put(otStart+2,6,'Regular Amount'); put(otStart+2,7,'OT Amount'); put(otStart+2,8,'SUM of Double Hours'); put(otStart+2,9,'Total');
+  // Pay amounts come from the payroll calculation (rate in effect for the period; OT at 1.5x).
+  const otPay=new Map(RESULT.payroll.employees.map(e=>[e.employeeName,e]));
+  const money=v=>(v==null||!Number.isFinite(Number(v)))?'':roundMoney(Number(v));
+  let regAmtTotal=0,otAmtTotal=0,payTotal=0;
+  ot.forEach((x,i)=>{const e=otPay.get(x.name)||{};const ra=money(e.regularPay),oa=money(e.overtimePay),tt=money(e.totalWages);if(ra!=='')regAmtTotal+=ra;if(oa!=='')otAmtTotal+=oa;if(tt!=='')payTotal+=tt;put(otStart+3+i,2,x.name);put(otStart+3+i,3,x.hours);put(otStart+3+i,4,x.regular);put(otStart+3+i,5,x.ot);put(otStart+3+i,6,ra);put(otStart+3+i,7,oa);put(otStart+3+i,8,x.double);put(otStart+3+i,9,tt);});
+  const otTotalRow=otStart+3+ot.length;
+  put(otTotalRow,2,'Grand Total'); put(otTotalRow,3,ctl.otHours); put(otTotalRow,4,ctl.regularHours); put(otTotalRow,5,ctl.overtimeHours); put(otTotalRow,6,roundMoney(regAmtTotal)); put(otTotalRow,7,roundMoney(otAmtTotal)); put(otTotalRow,8,ctl.doubleHours); put(otTotalRow,9,roundMoney(payTotal));
+
+  const ws=XLSX.utils.aoa_to_sheet(a);
+  ws['!cols']=[{wch:3},{wch:25},{wch:17},{wch:19},{wch:20},{wch:22},{wch:17},{wch:19},{wch:14},{wch:23},{wch:38},{wch:17},{wch:19},{wch:4}];
+  apply(ws,['B1','F1','J1','B24'],sectionStyle);
+  apply(ws,['B2','C2','F2','G2','F4','G4',`F${cashFilterRow}`,`G${cashFilterRow}`],filterStyle);
+  apply(ws,['B5','C5','D5','F7','G7','H7',`F${cashHeaderRow}`,`G${cashHeaderRow}`,`H${cashHeaderRow}`,'J3','K3','L3','M3','B26','C26','D26','E26','F26','G26','H26','I26'],headerStyle);
+  [gustoTotalRow,payrollRscTotalRow,cashTotalRow,jobGrandRow,otTotalRow].forEach(row=>styleRect(ws,row,2,row,13,totalStyle));
+  // Style job subtotals separately.
+  for(let rr=4;rr<jobGrandRow;rr++){const c=ws[`J${rr}`];if(c&&String(c.v||'').endsWith(' Total'))styleRect(ws,rr,10,rr,13,totalStyle);}
+  if(ws[`B${gustoTotalRow+1}`])ws[`B${gustoTotalRow+1}`].s={font:{color:{rgb:'FF0000'},italic:false}};
+  // Native Excel AutoFilter for the primary Gusto Hours table.
+  // A worksheet supports only one standard AutoFilter range; other Summary blocks retain the
+  // Pivot-style report-filter display shown above, while their detailed source remains filterable in Data.
+  ws['!autofilter']={ref:`B5:D${gustoTotalRow-1}`};
+  for(const addr of Object.keys(ws)){
+    if(addr[0]==='!')continue;
+    const cell=ws[addr];
+    if(typeof cell.v==='number')cell.z='#,##0.####';
+  }
+  // Orange-highlighted pay columns in the Overtime hours table: Regular Amount (F), OT Amount (G), Total (I).
+  const ORANGE='FF9900';
+  for(let rr=otStart+2;rr<=otTotalRow;rr++){
+    for(const col of ['F','G','I']){
+      const addr=`${col}${rr}`;
+      if(!ws[addr])ws[addr]={t:'s',v:''};
+      const base=ws[addr].s||{};
+      ws[addr].s={...base,fill:{fgColor:{rgb:ORANGE}},font:{...(base.font||{}),bold:rr===otStart+2||rr===otTotalRow,color:{rgb:'1C231F'}},border:{top:thin,bottom:thin,left:thin,right:thin}};
+      if(rr>otStart+2&&typeof ws[addr].v==='number')ws[addr].z='#,##0.00';
+    }
+  }
+  XLSX.utils.book_append_sheet(wb,ws,'Summary');
+
+  // ---------------- DATA ----------------
+  // Match client workbook exactly: 17 columns, no internal Route/helper field.
+  const dataAoa=[['fullname','fname','lname','number','group','local_date','local_day','local_start_time','local_end_time','tz','hours','jobcode_1','jobcode_2','jobcode_3','location','payrate','total pay']];
+  RESULT.dataRows.forEach(r=>dataAoa.push([
+    r.fullname,r.fname,r.lname,r.number??'',r.group??'',asDate(r.dateISO||r.local_date),r.local_day,r.local_start_time,r.local_end_time,r.tz,r.hours,r.jobcode_1,r.jobcode_2,r.jobcode_3,r.location,r.payrate??'',r.totalPay??''
+  ]));
+  const dws=XLSX.utils.aoa_to_sheet(dataAoa);
+  dws['!cols']=[{wch:24},{wch:14},{wch:16},{wch:10},{wch:10},{wch:13},{wch:10},{wch:18},{wch:18},{wch:10},{wch:10},{wch:22},{wch:38},{wch:28},{wch:22},{wch:12},{wch:15}];
+  styleRect(dws,1,1,1,17,headerStyle);
+  for(let rr=2;rr<=dataAoa.length;rr++){
+    if(dws[`F${rr}`])dws[`F${rr}`].z='m/d/yyyy';
+    if(dws[`K${rr}`])dws[`K${rr}`].z='#,##0.##';
+    if(dws[`P${rr}`])dws[`P${rr}`].z='$#,##0.####';
+    if(dws[`Q${rr}`])dws[`Q${rr}`].z='$#,##0.####';
+  }
+  if(dws['!ref'])dws['!autofilter']={ref:dws['!ref']};
+  XLSX.utils.book_append_sheet(wb,dws,'Data');
+
+  // ---------------- OVERTIME CALCULATION ----------------
+  // Exact client layout: daily detail A:F and employee roll-up H:L.
+  const daily=RESULT.payroll.daily;
+  const maxRows=Math.max(daily.length+1,ot.length+2);
+  const oa=Array.from({length:maxRows},()=>Array(12).fill(''));
+  const op=(row,col,val)=>{oa[row-1][col-1]=val;};
+  op(1,1,'fname'); op(1,2,'local_date'); op(1,3,'Sum of hours'); op(1,4,'Regular Hours'); op(1,5,'Overtime Hours'); op(1,6,'Double Hours');
+  daily.forEach((d,i)=>{const row=i+2;op(row,1,d.employeeName);op(row,2,asDate(d.date));op(row,3,calcValue(d.paidHours));op(row,4,calcValue(d.regularHours));op(row,5,calcValue(d.overtimeHours));op(row,6,calcValue(d.doubleHours));});
+  op(1,8,'fname'); op(1,9,'SUM of Sum of hours'); op(1,10,'SUM of Regular Hours'); op(1,11,'SUM of Overtime Hours'); op(1,12,'SUM of Double Hours');
+  ot.forEach((x,i)=>{const row=i+2;op(row,8,x.name);op(row,9,x.hours);op(row,10,x.regular);op(row,11,x.ot);op(row,12,x.double);});
+  const gt=ot.length+2; op(gt,8,'Grand Total'); op(gt,9,ctl.otHours); op(gt,10,ctl.regularHours); op(gt,11,ctl.overtimeHours); op(gt,12,ctl.doubleHours);
+  const ows=XLSX.utils.aoa_to_sheet(oa);
+  ows['!cols']=[{wch:23},{wch:14},{wch:15},{wch:17},{wch:18},{wch:15},{wch:3},{wch:23},{wch:20},{wch:22},{wch:23},{wch:20}];
+  styleRect(ows,1,1,1,6,headerStyle); styleRect(ows,1,8,1,12,headerStyle); styleRect(ows,gt,8,gt,12,totalStyle);
+  ows['!autofilter']={ref:`A1:F${daily.length+1}`};
+  for(let rr=2;rr<=daily.length+1;rr++){if(ows[`B${rr}`])ows[`B${rr}`].z='m/d/yyyy';for(const cc of ['C','D','E','F'])if(ows[`${cc}${rr}`])ows[`${cc}${rr}`].z='#,##0.##';}
+  for(let rr=2;rr<=gt;rr++)for(const cc of ['I','J','K','L'])if(ows[`${cc}${rr}`])ows[`${cc}${rr}`].z='#,##0.##';
+  XLSX.utils.book_append_sheet(wb,ows,'Overtime Calculation');
+
+  // ---------------- RSC AND REST ----------------
+  // Only CASH-classified employees; payroll employees' RSC remains only on Summary.
+  const rrRows=expectedCashEmployeeRows();
+  const rAoa=[['Name','RSC hour','Rest Break Hours','Total Hours','RSC Pay','Rest Break Pay','Total Pay'],
+    ...rrRows.map(r=>[r.name,r.rscH,r.restH,r.hours,r.rscPay,r.restPay,r.pay]),
+    ['Grand Total',ctl.cashRscHours,ctl.cashRestHours,ctl.cashHours,ctl.cashRscPay,ctl.cashRestPay,ctl.cashPay]];
+  const rws=XLSX.utils.aoa_to_sheet(rAoa);
+  rws['!cols']=[{wch:24},{wch:13},{wch:18},{wch:14},{wch:15},{wch:18},{wch:15}];
+  styleRect(rws,1,1,1,7,headerStyle); styleRect(rws,rAoa.length,1,rAoa.length,7,totalStyle);
+  rws['!autofilter']={ref:`A1:G${Math.max(1,rAoa.length-1)}`};
+  for(let rr=2;rr<=rAoa.length;rr++){
+    for(const cc of ['B','C','D'])if(rws[`${cc}${rr}`])rws[`${cc}${rr}`].z='#,##0.##';
+    for(const cc of ['E','F','G'])if(rws[`${cc}${rr}`])rws[`${cc}${rr}`].z='$#,##0.####';
+  }
+  XLSX.utils.book_append_sheet(wb,rws,'RSC and REST');
+
+  // ---------------- HOURLY RATES ----------------
+  // Show the effective rate for this payroll period, not a future rate that starts after the period.
+  // This is derived through resolveRate(), so future periods automatically use their applicable rate.
+  const hrAoa=[['','','',''],['','Full Name','Pay Rate','Notes'],['','','','']];
+  rateRows.forEach(x=>{const rr=resolveRate(x.name,RESULT.period.end);hrAoa.push(['',x.name,rr.rate??'',rr.note||x.notes||'']);});
+  const hws=XLSX.utils.aoa_to_sheet(hrAoa);
+  hws['!cols']=[{wch:3},{wch:27},{wch:13},{wch:42}];
+  styleRect(hws,2,2,2,4,headerStyle);
+  hws['!autofilter']={ref:`B2:D${hrAoa.length}`};
+  for(let rr=4;rr<=hrAoa.length;rr++)if(hws[`C${rr}`])hws[`C${rr}`].z='$#,##0.####';
+  XLSX.utils.book_append_sheet(wb,hws,'Hourly Rates');
+
+  return wb;
+}
+
+function appendBasicPostPayrollControl(ws,actual){
+  if(!ws||!actual)return;
+  const ref=XLSX.utils.decode_range(ws['!ref']||'A1:D1');
+  const start=ref.e.r+3; // one blank row, then the post-payroll control
+  const wageDebit=roundMoney(
+    Number(actual.regularWages||0)+Number(actual.overtimeWages||0)+
+    Number(actual.doubleWages||0)+Number(actual.sickTime||0)
+  );
+  const wagesLessChecks=roundMoney(wageDebit-Number(actual.employeeChecks||0));
+  const employerTax=roundMoney(Number(actual.employerTax||0)+Number(actual.additionalEarnings||0));
+  const employeeSideTax=roundMoney(Number(actual.debitTax||0)-employerTax);
+  const netPay=roundMoney(Number(actual.netPay||0));
+  const debitTax=roundMoney(Number(actual.debitTax||0));
+  const deductions=roundMoney(Number(actual.deductions||0));
+  const debitControl=roundMoney(wagesLessChecks+employerTax+employeeSideTax);
+  const creditControl=roundMoney(employeeSideTax+netPay+debitTax+deductions);
+  const diff=roundMoney(debitControl-creditControl);
+  const aoa=[
+    ['','',wagesLessChecks,'',''],
+    ['','',employerTax,'',''],
+    ['','',employeeSideTax,'',''],
+    ['','','',employeeSideTax,''],
+    ['','','',netPay,''],
+    ['','','',debitTax,''],
+    ['','','','',''],
+    ['','','',deductions,''],
+    ['','','','',''],
+    ['','',debitControl,creditControl,diff]
+  ];
+  XLSX.utils.sheet_add_aoa(ws,aoa,{origin:{r:start-1,c:0}});
+  for(let r=start;r<=start+9;r++){
+    for(const c of ['C','D','E']){
+      const cell=ws[`${c}${r}`];
+      if(cell&&typeof cell.v==='number')cell.z='$#,##0.00';
+    }
+  }
+  if(Math.abs(diff)>0.01)throw new Error(`Basic post-payroll control does not balance. Debit ${fmtM(debitControl)} vs credit ${fmtM(creditControl)}.`);
+}
+function appendBiweeklyBasicJournal(ws,actual){
+  if(!ws||!actual)return;
+  let totalsRow=-1;
+  const ref=XLSX.utils.decode_range(ws['!ref']||'A1:D1');
+  for(let r=ref.s.r;r<=ref.e.r;r++){const c=ws[XLSX.utils.encode_cell({r,c:1})];if(c&&String(c.v).trim().toLowerCase()==='totals')totalsRow=r;}
+  if(totalsRow<0)throw new Error('Biweekly Basic sheet Totals row not found.');
+  const wageDebit=roundMoney(Number(actual.regularWages||0)+Number(actual.overtimeWages||0)+Number(actual.doubleWages||0)+Number(actual.sickTime||0));
+  const payroll=roundMoney(wageDebit-Number(actual.employeeChecks||0));
+  const erTax=roundMoney(Number(actual.employerTax||0)+Number(actual.additionalEarnings||0));
+  const liab=roundMoney(Number(actual.debitTax||0)-erTax);
+  const net=roundMoney(Number(actual.netPay||0)),dtax=roundMoney(Number(actual.debitTax||0)),ded=roundMoney(Number(actual.deductions||0));
+  const debit=roundMoney(payroll+erTax+liab),credit=roundMoney(liab+net+dtax+ded),diff=roundMoney(debit-credit);
+  const bank='First Citizen Bank #0782';
+  const aoa=[
+    ['','Payroll Expenses:Payroll',payroll,'',''],
+    ['','Payroll Expenses:Payroll Tax',erTax,'',''],
+    ['','Payroll Liabilities',liab,'',''],
+    ['','Payroll Liabilities','',liab,''],
+    ['',bank,'',net,''],
+    ['',bank,'',dtax,''],
+    ['',bank,'',ded?ded:'',''],
+    ['','',debit,credit,diff]
+  ];
+  XLSX.utils.sheet_add_aoa(ws,aoa,{origin:{r:totalsRow+3,c:0}});
+  for(let i=0;i<aoa.length;i++)for(const c of ['C','D','E']){const cell=ws[`${c}${totalsRow+3+i+1}`];if(cell&&typeof cell.v==='number')cell.z='$#,##0.00';}
+  if(Math.abs(diff)>0.01)throw new Error(`Biweekly Basic journal does not balance. Debit ${fmtM(debit)} vs credit ${fmtM(credit)}.`);
+}
+function copySourceSheetToWorkbook(sourceWb,targetWb,name){
+  if(!sourceWb||!sourceWb.Sheets||!sourceWb.Sheets[name])return false;
+  // Source Basic/Detailed sheets are preserved as uploaded, including formulas/styles supported by xlsx-js-style.
+  const src=sourceWb.Sheets[name],copy={};
+  for(const k of Object.keys(src)){
+    if(k[0]==='!')copy[k]=(k==='!ref')?src[k]:(Array.isArray(src[k])?src[k].map(x=>(x&&typeof x==='object')?Object.assign({},x):x):src[k]);
+    else copy[k]=Object.assign({},src[k]);
+  }
+  XLSX.utils.book_append_sheet(targetWb,copy,name);
+  return true;
+}
+function setCellStyle(ws,addr,style){
+  if(!ws[addr])return;
+  ws[addr].s={...(ws[addr].s||{}),...style};
+}
+function styleRect(ws,r1,c1,r2,c2,style){
+  for(let r=r1;r<=r2;r++)for(let c=c1;c<=c2;c++){
+    const a=XLSX.utils.encode_cell({r:r-1,c:c-1});
+    if(ws[a])setCellStyle(ws,a,style);
+  }
+}
+function borderRect(ws,r1,c1,r2,c2){
+  const borderColor='B7C9D6';
+  const border={
+    top:{style:'thin',color:{rgb:borderColor}},
+    bottom:{style:'thin',color:{rgb:borderColor}},
+    left:{style:'thin',color:{rgb:borderColor}},
+    right:{style:'thin',color:{rgb:borderColor}}
+  };
+  for(let r=r1;r<=r2;r++)for(let c=c1;c<=c2;c++){
+    const a=XLSX.utils.encode_cell({r:r-1,c:c-1});
+    if(ws[a])ws[a].s={...(ws[a].s||{}),border};
+  }
+}
+function paintHeader(ws,row,startCol,endCol,fill='1F4E78'){
+  styleRect(ws,row,startCol,row,endCol,{
+    fill:{fgColor:{rgb:fill}},
+    font:{bold:true,color:{rgb:'FFFFFF'}},
+    alignment:{vertical:'center',wrapText:true}
+  });
+}
+function paintSubHeader(ws,row,startCol,endCol){
+  styleRect(ws,row,startCol,row,endCol,{
+    fill:{fgColor:{rgb:'D9EAF7'}},
+    font:{bold:true,color:{rgb:'1F1F1F'}},
+    alignment:{vertical:'center',wrapText:true}
+  });
+}
+function paintTotal(ws,row,startCol,endCol,fill='E2F0D9'){
+  styleRect(ws,row,startCol,row,endCol,{
+    fill:{fgColor:{rgb:fill}},
+    font:{bold:true,color:{rgb:'1F1F1F'}},
+    alignment:{vertical:'center'}
+  });
+}
+function gustoOutputStyleSheet(ws,widths=[]){
+  ws['!cols']=widths.map(w=>({wch:w}));
+  const ref=XLSX.utils.decode_range(ws['!ref']||'A1:A1');
+  const baseBorder={
+    bottom:{style:'hair',color:{rgb:'D9E2F3'}}
+  };
+  for(let r=ref.s.r;r<=ref.e.r;r++){
+    for(let c=ref.s.c;c<=ref.e.c;c++){
+      const a=XLSX.utils.encode_cell({r,c});
+      if(!ws[a])continue;
+      ws[a].s={
+        ...(ws[a].s||{}),
+        font:{name:'Arial',sz:10,...((ws[a].s||{}).font||{})},
+        alignment:{vertical:'center',...((ws[a].s||{}).alignment||{})},
+        border:{...baseBorder,...((ws[a].s||{}).border||{})}
+      };
+    }
+  }
+  ws['!rows']=Array.from({length:ref.e.r+1},(_,i)=>({hpt:i===0?22:18}));
+  ws['!freeze']={xSplit:0,ySplit:1};
+}
+function styleWcSheet(ws,rowCount){
+  paintHeader(ws,1,1,11);
+  // The WC code summary occupies E:K in the first three detail rows.
+  for(let r=2;r<=Math.min(4,rowCount);r++){
+    styleRect(ws,r,5,r,11,{
+      fill:{fgColor:{rgb:r%2===0?'EAF2F8':'F6F9FC'}},
+      font:{bold:r<=4}
+    });
+  }
+  borderRect(ws,1,1,rowCount,3);
+  borderRect(ws,1,5,Math.min(4,rowCount),11);
+  for(let r=2;r<=rowCount;r++){
+    for(const c of ['C','F','G','H','I']){
+      const a=`${c}${r}`; if(ws[a]&&typeof ws[a].v==='number')ws[a].z='$#,##0.########';
+    }
+    if(ws[`K${r}`]&&typeof ws[`K${r}`].v==='number')ws[`K${r}`].z='0.000000';
+  }
+}
+function styleHzElSheet(ws){
+  // Match the approved client layout: calculation blocks are plain with borders;
+  // invoice headings are colored; final totals are highlighted.
+  borderRect(ws,1,1,9,3);
+  borderRect(ws,1,5,10,7);
+  borderRect(ws,13,1,18,3);
+  borderRect(ws,13,5,18,7);
+  styleRect(ws,13,1,3,3,{fill:{fgColor:{rgb:'D9EAF7'}},font:{bold:true}});
+  styleRect(ws,13,5,13,7,{fill:{fgColor:{rgb:'D9EAF7'}},font:{bold:true}});
+  paintTotal(ws,18,1,2,'FFF200');
+  paintTotal(ws,18,5,6,'FFF200');
+  for(let r=1;r<=18;r++){
+    for(const c of ['B','F']){
+      const a=`${c}${r}`;
+      if(!ws[a]||typeof ws[a].v!=='number')continue;
+      if(r===3)ws[a].z='0.000000';
+      else if([1,2,5,6,9,14,18].includes(r))ws[a].z='$#,##0.00';
+      else ws[a].z='0.00####';
+    }
+  }
+}
+function stylePaulSheet(ws){
+  borderRect(ws,1,1,10,2);
+  borderRect(ws,13,1,20,4);
+  styleRect(ws,13,1,13,4,{fill:{fgColor:{rgb:'D9EAF7'}},font:{bold:true}});
+  paintTotal(ws,19,1,4,'FFF200');
+  styleRect(ws,20,1,20,4,{fill:{fgColor:{rgb:'FFF2CC'}},font:{bold:true}});
+  for(let r=1;r<=20;r++)for(const c of ['B','C','D']){
+    const a=`${c}${r}`;
+    if(!ws[a]||typeof ws[a].v!=='number')continue;
+    if(r===3)ws[a].z='0.000000';
+    else if([1,2,5,6,8,9,14,17,19,20].includes(r))ws[a].z='$#,##0.00';
+    else ws[a].z='0.00####';
+  }
+}
+function styleBiweeklySheet(ws){
+  paintHeader(ws,1,1,4);
+  paintHeader(ws,1,6,8);
+  borderRect(ws,1,1,8,4);
+  borderRect(ws,1,6,8,8);
+  paintTotal(ws,7,1,4,'E2F0D9');
+  paintTotal(ws,7,6,8,'E2F0D9');
+  styleRect(ws,8,1,8,4,{fill:{fgColor:{rgb:'FFF2CC'}},font:{bold:true}});
+  styleRect(ws,8,6,8,8,{fill:{fgColor:{rgb:'FFF2CC'}},font:{bold:true}});
+  for(let r=1;r<=8;r++)for(const c of ['B','C','D','G','H']){
+    const a=`${c}${r}`;
+    if(ws[a]&&typeof ws[a].v==='number')ws[a].z='$#,##0.00####';
+  }
+}
+function validateGeneratedWorkbook(wb,requiredSheets=[]){
+  const problems=[];
+  for(const name of requiredSheets){
+    if(!wb.Sheets[name])problems.push(`Missing required sheet: ${name}`);
+  }
+  const badText=/^#(VALUE!|REF!|DIV\/0!|NAME\?|N\/A|NUM!|NULL!)/i;
+  for(const name of wb.SheetNames||[]){
+    const ws=wb.Sheets[name];
+    if(!ws)continue;
+    const ref=XLSX.utils.decode_range(ws['!ref']||'A1:A1');
+    for(let r=ref.s.r;r<=ref.e.r;r++)for(let c=ref.s.c;c<=ref.e.c;c++){
+      const a=XLSX.utils.encode_cell({r,c}),cell=ws[a];
+      if(!cell)continue;
+      if(cell.t==='e')problems.push(`${name}!${a} contains an Excel error`);
+      if(typeof cell.v==='string'&&badText.test(cell.v.trim()))problems.push(`${name}!${a} = ${cell.v}`);
+      if(typeof cell.v==='number'&&!Number.isFinite(cell.v))problems.push(`${name}!${a} contains an invalid number`);
+    }
+  }
+  return {ok:problems.length===0,problems};
+}
+function combinedWcEmployeeMap(){
+  const rows=[];
+  const add=(map,source)=>{
+    if(!map)return;
+    for(const [k,e] of map){
+      const code=WC_EMPLOYEE_MAP[k];
+      if(!code)continue;
+      rows.push({
+        key:k,name:e.employeeName,source,code,
+        regular:Number(e.regular||0)+Number(e.sick||0),
+        overtime:Number(e.ot||0)+Number(e.double||0)
+      });
+    }
+  };
+  add(GUSTO.employeeActual,'Weekly');
+  add(BIWEEKLY.employeeActual,'Biweekly');
+  return rows;
+}
+function updatedWeeklyGustoWorkbook(){
+  if(!GUSTO.uploaded||!GUSTO.sourceWorkbook)throw new Error('Upload the regular weekly Gusto GL first.');
+  if(standalone()&&GO_INCL_BI&&BIWEEKLY.uploaded&&BIWEEKLY.period&&GUSTO.period&&BIWEEKLY.period.end!==GUSTO.period.end)throw new Error(`The biweekly GL ends ${BIWEEKLY.period.end} but the weekly GL ends ${GUSTO.period.end}. They must be the same cycle.`);
+  const wb=XLSX.utils.book_new();
+  if(!copySourceSheetToWorkbook(GUSTO.sourceWorkbook,wb,'Basic')||!copySourceSheetToWorkbook(GUSTO.sourceWorkbook,wb,'Detailed'))
+    throw new Error('The weekly Gusto file must contain Basic and Detailed sheets.');
+  appendBasicPostPayrollControl(wb.Sheets['Basic'],GUSTO.actual);
+
+  // IMPORTANT: All calculated output amounts below are computed from uploaded GL rows + configured master rules.
+  // No test payroll amounts are embedded in the export and no Excel formulas are required for these calculations.
+
+  // ---------- WC ----------
+  const sourceRows=[];
+  const addSourceRows=(map)=>{
+    if(!map)return;
+    for(const [k,e] of map){
+      if(Number(e.regular||0))sourceRows.push({key:k,type:'RegularWages',desc:`Regular Wages for ${e.employeeName}`,amount:Number(e.regular||0)});
+      if(Number(e.ot||0))sourceRows.push({key:k,type:'OvertimeWages',desc:`Overtime Wages for ${e.employeeName}`,amount:Number(e.ot||0)});
+      if(Number(e.double||0))sourceRows.push({key:k,type:'DoubleTimeWages',desc:`Double-Time Wages for ${e.employeeName}`,amount:Number(e.double||0)});
+      if(Number(e.sick||0))sourceRows.push({key:k,type:'SickTimeOff',desc:`Sick Time Off for ${e.employeeName}`,amount:Number(e.sick||0)});
+    }
+  };
+  addSourceRows(GUSTO.employeeActual);
+  // The supplied approved WC workbook combines the regular weekly payroll with the matching biweekly payroll when uploaded.
+  if(BIWEEKLY.uploaded&&(!standalone()||GO_INCL_BI))addSourceRows(BIWEEKLY.employeeActual);
+
+  const groupMap=new Map();
+  for(const r of sourceRows){
+    const code=WC_EMPLOYEE_MAP[r.key];
+    if(!code)continue;
+    if(!groupMap.has(code))groupMap.set(code,{regular:0,ot:0});
+    const g=groupMap.get(code);
+    if(r.type==='RegularWages'||r.type==='SickTimeOff')g.regular+=r.amount;
+    else g.ot+=r.amount;
+  }
+
+  const wageRows=[['Account Type','Account Description','Debit','', 'Code','Regular Pay','Overtime','2/3 OT for WC','Total pay','Pay for ','WC Rate']];
+  sourceRows.forEach(r=>wageRows.push([r.type,r.desc,r.amount,'','','','','','','','']));
+  const codes=[...new Set(wcRateRows.filter(x=>String(x.code).trim()).map(x=>String(x.code).trim()))];
+  while(wageRows.length<Math.max(sourceRows.length+1,codes.length+1))wageRows.push(Array(11).fill(''));
+  codes.forEach((code,i)=>{
+    const cfg=wcRateRows.find(x=>String(x.code).trim()===code)||{};
+    const g=groupMap.get(code)||{regular:0,ot:0};
+    const otBasis=g.ot*(2/3);
+    const totalBasis=g.regular+otBasis;
+    const row=i+1;
+    wageRows[row][4]=Number(code);
+    wageRows[row][5]=g.regular?g.regular:'';
+    wageRows[row][6]=g.ot;
+    wageRows[row][7]=otBasis;
+    wageRows[row][8]=totalBasis;
+    wageRows[row][9]=cfg.notes||'';
+    wageRows[row][10]=Number(cfg.rate||0);
+  });
+  const wcWs=XLSX.utils.aoa_to_sheet(wageRows);
+  gustoOutputStyleSheet(wcWs,[20,40,15,3,10,16,16,18,16,31,13]);
+  styleWcSheet(wcWs,wageRows.length);
+  XLSX.utils.book_append_sheet(wb,wcWs,'WC');
+
+  // ---------- Hz & El ----------
+  const hzRules=Object.entries(SPECIAL_RULES).filter(([,r])=>r.rule==='HZ_EL');
+  const hzAoa=Array.from({length:18},()=>Array(7).fill(''));
+  const set=(r,c,v)=>hzAoa[r-1][c-1]=v;
+  const buildSpecialBlock=(key,rule,col,sideIndex)=>{
+    const fallbackName=key.replace(/\b\w/g,x=>x.toUpperCase());
+    const e=GUSTO.employeeActual.get(key)||{employeeName:fallbackName,regular:0,ot:0,double:0,sick:0,employerTax:0};
+    const name=e.employeeName||fallbackName;
+    const first=name.split(' ')[0];
+    const regular=Number(e.regular||0)+Number(e.sick||0);
+    const ot=Number(e.ot||0)+Number(e.double||0);
+    const rate=Number(wcRate(rule.wcCode)||0);
+    const tax=GUSTO.taxAssignmentValid?Number(e.employerTax||0):0;
+    const exempt=ot/3;
+    const otAfter=ot-exempt;
+    const wcBasis=regular+otAfter;
+    const wc=wcBasis*rate;
+    const totalCost=wcBasis+wc+tax;
+    const serviceFee=rule.feePct?totalCost*Number(rule.feePct)/100:0;
+    const invoiceWages=regular+ot;
+    const invoiceSubtotal=invoiceWages+tax+wc;
+    const invoiceFee=rule.feePct?invoiceSubtotal*Number(rule.feePct)/100:null;
+    const invoiceTotal=invoiceSubtotal+(invoiceFee||0);
+
+    if(sideIndex===0){
+      set(1,col,`${first} Regualr wages`);
+      set(2,col,'OT');
+      set(3,col,'WC Rate'); set(3,col+2,`As per Smartpay code ${rule.wcCode}`);
+      set(4,col,'1/3% WC Exempt');
+      set(5,col,'OT After Exemption');
+      set(6,col,'Total Hours');
+      set(7,col,'WC');
+      set(8,col,"Employer's tax Part"); set(8,col+2,'From paycheck');
+      set(9,col,'Total Cost');
+      set(13,col,'RSC Invoice (LXP  Enterprises LLC)');
+    }else{
+      set(1,col,`Regular Wages for ${name}`);
+      set(2,col,`Overtime Wages for ${name}`);
+      set(3,col,'Wc rate'); set(3,col+2,`As per Righsum code ${rule.wcCode}`);
+      set(4,col,'1/3% of Wc exempt');
+      set(5,col,'Overtime after exemption');
+      set(6,col,'Total Hours');
+      set(7,col,'WC');
+      set(8,col,"Employer's tax Part"); set(8,col+2,'From paycheck');
+      set(9,col,'Total Cost');
+      set(10,col,`${Number(rule.feePct||0)}% Service Charge`);
+      set(13,col,'RSC Invoice (LXP  Enterprises LLC)');
+    }
+
+    set(1,col+1,regular);
+    set(2,col+1,ot);
+    set(3,col+1,rate);
+    set(4,col+1,exempt);
+    set(5,col+1,otAfter);
+    set(6,col+1,wcBasis);
+    set(7,col+1,wc);
+    set(8,col+1,tax);
+    set(9,col+1,totalCost);
+    if(sideIndex===1)set(10,col+1,serviceFee);
+
+    set(14,col,'Wages');set(14,col+1,invoiceWages);
+    set(15,col,'Employer Tax');set(15,col+1,tax);
+    set(16,col,'WC');set(16,col+1,wc);
+    set(17,col,'Fee');set(17,col+1,invoiceFee==null?'':invoiceFee);
+    set(18,col,'Total');set(18,col+1,invoiceTotal);
+  };
+  if(hzRules[0])buildSpecialBlock(hzRules[0][0],hzRules[0][1],1,0);
+  if(hzRules[1])buildSpecialBlock(hzRules[1][0],hzRules[1][1],5,1);
+  const hzWs=XLSX.utils.aoa_to_sheet(hzAoa);
+  gustoOutputStyleSheet(hzWs,[31,18,31,4,35,18,31]);
+  styleHzElSheet(hzWs);
+  XLSX.utils.book_append_sheet(wb,hzWs,'Hz & El');
+
+  // ---------- Paul ----------
+  const paulEntry=Object.entries(SPECIAL_RULES).find(([,r])=>r.rule==='PAUL_ALLOCATION');
+  if(paulEntry){
+    const [key,rule]=paulEntry;
+    const e=GUSTO.employeeActual.get(key)||{employeeName:key.replace(/\b\w/g,x=>x.toUpperCase()),regular:0,ot:0,double:0,sick:0,employerTax:0};
+    const regular=Number(e.regular||0)+Number(e.sick||0);
+    const ot=Number(e.ot||0)+Number(e.double||0);
+    const rate=Number(wcRate(rule.wcCode)||0);
+    const tax=GUSTO.taxAssignmentValid?Number(e.employerTax||0):0;
+    const paidThisWeek=GUSTO.employeeActual.has(key);
+    const employeeTax=paidThisWeek?getEmployeeTax('Weekly',e.employeeName):0;
+    if(paidThisWeek&&employeeTax==null)throw new Error(`Employee tax is required for ${e.employeeName}. Import the paystubs PDF (or type the amount) first.`);
+    const exempt=ot/3;
+    const otAfter=ot-exempt;
+    const wcBasis=regular+otAfter;
+    const wc=wcBasis*rate;
+    const totalCost=wcBasis+wc+tax;
+    const serviceFee=totalCost*Number(rule.feePct||0)/100;
+    const wages=regular+ot;
+    const invoiceSubtotal=wages+tax+wc;
+    const invoiceFee=invoiceSubtotal*Number(rule.feePct||0)/100;
+    const totalPay=invoiceSubtotal+invoiceFee;
+    const alloc1=rule.allocations[0]||['Allocation 1',0],alloc2=rule.allocations[1]||['Allocation 2',0];
+    const p1=Number(alloc1[1]||0)/100,p2=Number(alloc2[1]||0)/100;
+    const first=(e.employeeName||'Paul').split(' ')[0];
+    const pa=[
+      [`${first} Regualr wages`,regular,'',''],
+      ['OT wage',ot,'',''],
+      ['WC Rate',rate,'',''],
+      ['1/3% WC Exempt',exempt,'',''],
+      ['OT After Exemption',otAfter,'',''],
+      ['Total Hours',wcBasis,'',''],
+      ['WC',wc,'',''],
+      ["Employer's tax Part",tax,'',''],
+      ['Total Cost',totalCost,'',''],
+      [`${Number(rule.feePct||0)}%service fee`,serviceFee,'',''],
+      ['','','',''],
+      ['','','',''],
+      ['RSC Invoice (LXP  Enterprises LLC)','Total Amount',`${alloc1[0]} - ${alloc1[1]}%`,`${alloc2[0]} - ${alloc2[1]}%`],
+      ['Wages',wages,wages*p1,wages*p2],
+      ['Employer Tax',tax,tax*p1,tax*p2],
+      ['WC',wc,wc*p1,wc*p2],
+      ['Total',invoiceSubtotal,invoiceSubtotal*p1,invoiceSubtotal*p2],
+      ['Fee',invoiceFee,invoiceFee*p1,invoiceFee*p2],
+      ['Total Pay',totalPay,totalPay*p1,totalPay*p2],
+      ['Employee tax',employeeTax,employeeTax*p1,employeeTax*p2]
+    ];
+    const pWs=XLSX.utils.aoa_to_sheet(pa);
+    gustoOutputStyleSheet(pWs,[31,19,25,25]);
+    stylePaulSheet(pWs);
+    XLSX.utils.book_append_sheet(wb,pWs,'Paul');
+  }
+  return wb;
+}
+function updatedBiweeklyGustoWorkbook(){
+  if(!BIWEEKLY.uploaded||!BIWEEKLY.sourceWorkbook)throw new Error('Upload the 14-day biweekly Gusto GL first.');
+  const taxCheck=validateRequiredEmployeeTaxes('Biweekly');
+  if(!taxCheck.ok)throw new Error('Missing employee tax: '+taxCheck.missing.map(x=>x.name).join(', ')+'. Import paycheck/tax detail or enter it in Step 4.');
+  const wb=XLSX.utils.book_new();
+  if(!copySourceSheetToWorkbook(BIWEEKLY.sourceWorkbook,wb,'Basic')||!copySourceSheetToWorkbook(BIWEEKLY.sourceWorkbook,wb,'Detailed'))
+    throw new Error('The biweekly Gusto file must contain Basic and Detailed sheets.');
+  appendBiweeklyBasicJournal(wb.Sheets['Basic'],BIWEEKLY._actual);
+
+  const uniqueRows=[];
+  const seen=new Set();
+  for(const r of BIWEEKLY.rows||[]){
+    const k=normalizeName(r.employee);
+    if(!k||seen.has(k))continue;
+    seen.add(k);uniqueRows.push(r);
+  }
+  const byRule=[];
+  for(const k of Object.keys(BIWEEKLY_RULES)){
+    const row=uniqueRows.find(r=>normalizeName(r.employee)===k);
+    if(row&&!byRule.some(x=>normalizeName(x.employee)===k))byRule.push(row);
+  }
+  const left=byRule[0]||null,right=byRule[1]||null;
+  const a=Array.from({length:8},()=>Array(8).fill(''));
+  const put=(r,c,v)=>a[r-1][c-1]=v;
+  const writeBlock=(x,labelCol,valueCol,allocationCols)=>{
+    if(!x)return;
+    const first=(x.employee||'Employee').split(' ')[0];
+    const wages=Number(x.wages||0),tax=Number(x.tax||0),wc=Number(x.wc||0),feePct=Number(x.feePct||0);
+    const employeeTax=getEmployeeTax('Biweekly',x.employee);
+    if(employeeTax==null)throw new Error(`Employee tax is required for ${x.employee}.`);
+    const subtotal=wages+tax+wc;
+    const fee=subtotal*feePct/100;
+    const total=subtotal+fee;
+    put(1,labelCol,first);put(1,valueCol,'Total Amount');
+    (x.allocations||[]).forEach((al,i)=>{if(allocationCols[i])put(1,allocationCols[i],`${al.label} - ${al.pct}%`);});
+    const vals=[wages,tax,wc,subtotal,fee,total,employeeTax];
+    const labels=['Total Pay','Employer taxes',"Worker's compensation",'Total Pay',`${feePct}% Service Fee`,'Total Pay','employee tax'];
+    for(let i=0;i<7;i++){put(i+2,labelCol,labels[i]);put(i+2,valueCol,vals[i]);}
+    (x.allocations||[]).forEach((al,i)=>{
+      const col=allocationCols[i];if(!col)return;
+      const pct=Number(al.pct||0)/100;
+      for(let r=2;r<=8;r++)put(r,col,Number(a[r-1][valueCol-1]||0)*pct);
+    });
+  };
+  writeBlock(left,1,2,[3,4]);
+  writeBlock(right,6,7,[8]);
+
+  const ws=XLSX.utils.aoa_to_sheet(a);
+  gustoOutputStyleSheet(ws,[24,18,18,18,4,24,18,18]);
+  styleBiweeklySheet(ws);
+  XLSX.utils.book_append_sheet(wb,ws,'Meaghan & Ryan');
+
+  // Strong control: on a two-employee biweekly payroll, entered employee tax should reconcile
+  // to the GL employee-side tax total within normal penny rounding.
+  const glEmployeeTax=employeeTaxControl('Biweekly');
+  const entered=requiredEmployeeTaxRows().filter(r=>r.scope==='Biweekly').reduce((sum,r)=>sum+(getEmployeeTax('Biweekly',r.name)||0),0);
+  if(glEmployeeTax!=null&&Math.abs(entered-glEmployeeTax)>0.0201)
+    throw new Error(`Biweekly employee-tax control failed. Entered ${fmtM(entered)} vs GL employee-side tax ${fmtM(glEmployeeTax)}.`);
+  return wb;
+}
+function downloadUpdatedWeeklyGusto(){
+  if(!standalone()&&APPROVAL.status!=='APPROVED')return alert('Approve payroll first.');
+  if(!GUSTO.uploaded)return alert('Upload the matching weekly Gusto GL first.');
+  const taxCheck=validateRequiredEmployeeTaxes('Weekly');
+  if(!taxCheck.ok)return alert('Employee tax is required for: '+taxCheck.missing.map(x=>x.name).join(', ')+'. Import paycheck/tax detail or enter it in Step 4.');
+  try{
+    const output=updatedWeeklyGustoWorkbook();
+    const check=validateGeneratedWorkbook(output,['Basic','Detailed','WC','Hz & El','Paul']);
+    if(!check.ok)throw new Error('Output validation failed:\n'+check.problems.slice(0,12).join('\n'));
+    const suffix=(BIWEEKLY.uploaded&&(!standalone()||GO_INCL_BI))?'_with_biweekly_WC':'';
+    XLSX.writeFile(output,`Updated_Weekly_Gusto_${GUSTO.period.start}_to_${GUSTO.period.end}${suffix}.xlsx`);
+  }catch(e){alert('Unable to create weekly Gusto workbook: '+e.message);}
+}
+function downloadUpdatedBiweeklyGusto(){
+  if(!standalone()&&APPROVAL.status!=='APPROVED')return alert('Approve payroll first.');
+  if(!BIWEEKLY.uploaded)return alert('Upload the matching biweekly Gusto GL first.');
+  try{
+    const output=updatedBiweeklyGustoWorkbook();
+    const check=validateGeneratedWorkbook(output,['Basic','Detailed','Meaghan & Ryan']);
+    if(!check.ok)throw new Error('Output validation failed:\n'+check.problems.slice(0,12).join('\n'));
+    XLSX.writeFile(output,`Updated_Biweekly_Gusto_${BIWEEKLY.period.start}_to_${BIWEEKLY.period.end}.xlsx`);
+  }catch(e){alert('Unable to create biweekly Gusto workbook: '+e.message);}
+}
+
+function downloadWorkbook(){if(APPROVAL.status!=='APPROVED')return alert('Approve payroll first.');if(!GUSTO.uploaded&&!confirm('Gusto payroll GL is not uploaded. Download without post-payroll confirmation?'))return;if(GUSTO.uploaded&&!GUSTO.comparison?.passed&&!confirm('Gusto wages do not fully match. Download anyway?'))return;if(GUSTO.uploaded&&GUSTO.warnings.length&&!confirm('Gusto wages match, but WC/special calculation warnings remain. Download anyway?'))return;XLSX.writeFile(expectedOutputWorkbook(),`Week ${RESULT.period.start}_to_${RESULT.period.end}.xlsx`);}
+function downloadAuditWorkbook(){if(APPROVAL.status!=='APPROVED')return alert('Approve payroll first.');XLSX.writeFile(baseWorkbook(true),`Blunted_Payroll_Audit_${RESULT.period.start}_to_${RESULT.period.end}.xlsx`);}
+function downloadCashWorkbook(){if(APPROVAL.status!=='APPROVED')return alert('Approve payroll first.');const wb=XLSX.utils.book_new(),rows=expectedCashEmployeeRows(),ctl=expectedControlTotals();append(wb,[['Name','RSC hour','Rest Break Hours','Total Hours','RSC Pay','Rest Break Pay','Total Pay'],...rows.map(r=>[r.name,r.rscH,r.restH,r.hours,r.rscPay,r.restPay,r.pay]),['Grand Total',ctl.cashRscHours,ctl.cashRestHours,ctl.cashHours,ctl.cashRscPay,ctl.cashRestPay,ctl.cashPay]],'RSC and REST',[24,13,17,13,14,17,14]);XLSX.writeFile(wb,`RSC_Cash_${RESULT.period.start}_to_${RESULT.period.end}.xlsx`);}
+function downloadOTWorkbook(){if(APPROVAL.status!=='APPROVED')return alert('Approve payroll first.');const full=expectedOutputWorkbook(),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,full.Sheets['Overtime Calculation'],'Overtime Calculation');XLSX.writeFile(wb,`Overtime_${RESULT.period.start}_to_${RESULT.period.end}.xlsx`);}
+
+// Events
+const dz=document.getElementById('dropzone');['dragover','dragleave','drop'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();if(ev==='drop'&&e.dataTransfer.files[0])loadTimesheet(e.dataTransfer.files[0]);}));dz.addEventListener('click',e=>{if(!e.target.closest('label'))document.getElementById('fileInput').click();});document.getElementById('fileInput').addEventListener('change',e=>{if(e.target.files[0])loadTimesheet(e.target.files[0]);e.target.value='';});document.getElementById('rateFileInput').addEventListener('change',e=>{if(e.target.files[0])loadRateFile(e.target.files[0]);e.target.value='';});document.getElementById('gustoFileInput').addEventListener('change',e=>{if(e.target.files[0])loadGusto(e.target.files[0]);e.target.value='';});document.getElementById('biweeklyFileInput').addEventListener('change',e=>{if(e.target.files[0])loadBiweekly(e.target.files[0]);e.target.value='';});document.getElementById('gustoPreviewInput').addEventListener('change',e=>{if(e.target.files[0])loadGustoPreview(e.target.files[0]);e.target.value='';});document.getElementById('employeeTaxFileInput').addEventListener('change',e=>{if(e.target.files[0])loadEmployeeTaxFile(e.target.files[0]);e.target.value='';});['payrollFrequency','payPeriodStart','payPeriodEnd','doubleMultiplier','weekendOT'].forEach(id=>document.getElementById(id).addEventListener('change',()=>{PAY_PERIOD_SOURCE='manual';invalidate();}));
+initPeriod();drawSetup();drawEmployeeTaxTable();
+/* ================= Top menu + "Gusto Only" tab ================= */
+function afterGustoChange(){ if(standalone())renderGustoOnly(); else renderAll(); }
+function switchTab(t){
+  if(t===CUR_TAB)return;
+  TAB_SLOTS[CUR_TAB]={GUSTO,BIWEEKLY,EMPLOYEE_TAX};
+  const s=TAB_SLOTS[t]||{GUSTO:emptyGusto(),BIWEEKLY:emptyBiweekly(),EMPLOYEE_TAX:new Map()};
+  GUSTO=s.GUSTO;BIWEEKLY=s.BIWEEKLY;EMPLOYEE_TAX=s.EMPLOYEE_TAX;CUR_TAB=t;
+  document.getElementById('tab-main').style.display=t==='main'?'':'none';
+  document.getElementById('tab-gusto').style.display=t==='gusto'?'':'none';
+  document.querySelectorAll('.navtab').forEach(b=>{const on=b.dataset.tab===t;b.classList.toggle('active',on);b.setAttribute('aria-selected',on?'true':'false');});
+  window.scrollTo(0,0);
+  if(t==='gusto')renderGustoOnly();
+  else{ if(RESULT)renderAll(); else{drawEmployeeTaxTable();syncButtons();} }
+  try{history.replaceState(null,'','#'+t);}catch(e){}
+}
+function goEl(id){return document.getElementById(id);}
+function goDate(iso,withYear){const d=new Date(iso+'T00:00:00Z');return d.toLocaleDateString('en-US',Object.assign({month:'short',day:'numeric',timeZone:'UTC'},withYear?{year:'numeric'}:{}));}
+function goRange(p){return p?`${goDate(p.start)} – ${goDate(p.end,true)}`:'—';}
+function goMoney(v){if(v==null||!Number.isFinite(Number(v)))return '—';const n=roundMoney(v);return (n<0?'-':'')+'$'+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function goChip(l,v,cls){return `<div class="go-chip ${cls||''}"><div class="l">${esc(l)}</div><div class="v">${v}</div></div>`;}
+function goWages(a){return roundMoney(Number(a.regularWages||0)+Number(a.overtimeWages||0)+Number(a.doubleWages||0)+Number(a.sickTime||0));}
+function goAlign(){
+  // Only relevant when the weekly workbook is asked to include the biweekly wages.
+  if(GO_INCL_BI&&GUSTO.uploaded&&BIWEEKLY.uploaded&&GUSTO.period&&BIWEEKLY.period&&GUSTO.period.end!==BIWEEKLY.period.end)
+    return {ok:false,msg:`The 14-day GL ends ${goDate(BIWEEKLY.period.end,true)} but the weekly GL ends ${goDate(GUSTO.period.end,true)}. They must end on the same day — remove the 14-day GL or load the right one.`};
+  return {ok:true};
+}
+function goBuild(kind){try{return {wb:kind==='weekly'?updatedWeeklyGustoWorkbook():updatedBiweeklyGustoWorkbook(),err:null};}catch(e){return {wb:null,err:e.message};}}
+function goSetBadge(id,cls,text){const b=goEl(id);b.className='badge '+cls;b.textContent=text;}
+function goStatusStyle(id){const el=goEl(id),t=el.textContent||'';el.className='hint go-status '+(/^(Unable|No required|Upload the|Please upload|Employee tax control)/.test(t)?'bad':/^Imported/.test(t)?'ok':'');}
+function goSheetHtml(ws){
+  const aoa=XLSX.utils.sheet_to_json(ws,{header:1,defval:''}).filter(r=>r.some(c=>c!==''&&c!=null));
+  let w=0;aoa.forEach(r=>{for(let i=r.length-1;i>=0;i--){if(r[i]!==''&&r[i]!=null){w=Math.max(w,i+1);break;}}});
+  const f=v=>{if(typeof v==='number'){const a=Math.abs(v);return a!==0&&a<1?String(+v.toFixed(6)):v.toFixed(2);}return esc(v);};
+  return `<div class="overflow" style="max-height:340px"><table>${aoa.map(r=>'<tr>'+Array.from({length:w},(_,i)=>`<td>${f(r[i]??'')}</td>`).join('')+'</tr>').join('')}</table></div>`;
+}
+function goTaxTable(scope,rows){
+  if(!rows.length)return '';
+  const ctl=employeeTaxControl(scope);
+  let h='<div class="overflow go-tax" style="margin-top:12px"><table><tr><th>Employee</th><th>Employee tax</th><th>Where it came from</th><th></th></tr>';
+  for(const r of rows){
+    const x=EMPLOYEE_TAX.get(employeeTaxKey(scope,r.name));
+    const manual=x&&/^Manual/.test(x.source||'');
+    h+=`<tr><td>${esc(r.name)}</td><td><input type="number" min="0" step="0.01" value="${x?x.amount:''}" placeholder="from PDF" aria-label="Employee tax for ${escAttr(r.name)}" onchange="setEmployeeTax('${scope}',this.dataset.name,this.value,'Manual entry')" data-name="${escAttr(r.name)}"></td><td style="white-space:normal">${esc(x?x.source:'Not imported yet')}</td><td>${x?(manual?'<span class="badge b-warn">Typed in</span>':'<span class="badge b-ok">Imported</span>'):'<span class="badge b-bad">Needed</span>'}</td></tr>`;
+  }
+  h+='</table></div>';
+  if(ctl!=null){
+    const entered=rows.reduce((s,r)=>s+(getEmployeeTax(scope,r.name)||0),0),ok=rows.every(r=>getEmployeeTax(scope,r.name)!=null)&&Math.abs(entered-ctl)<=0.0201;
+    h+=`<div class="hint">Gusto GL cross-check: employee-side tax in the GL is <b>${goMoney(ctl)}</b>; imported total is <b>${goMoney(entered)}</b> — ${ok?'<span style="color:var(--ok)">match ✓</span>':'<span style="color:var(--bad)">does not match ✗</span>'}</div>`;
+  }
+  return h;
+}
+function goGlBlock(G,kind){
+  const a=kind==='weekly'?G.actual:G._actual,p=G.period;
+  const expected=kind==='weekly'?7:14;
+  let h=`<div class="go-chips">`+
+    goChip('Pay period',esc(goRange(p)))+
+    goChip('Days',String(p.days),p.days===expected?'ok':'bad')+
+    goChip('Employees',String(G.employeeActual.size))+
+    goChip('Total wages',goMoney(goWages(a)))+
+    goChip('Employer tax',goMoney(a.employerTax))+
+    goChip('Net pay',goMoney(a.netPay))+
+    goChip('Debits = credits',a.balanced?'Yes ✓':'No ✗',a.balanced?'ok':'bad')+
+    `</div>`;
+  const rows=[...G.employeeActual.values()];
+  h+=`<details class="go-det"><summary>See the ${rows.length} employees in this GL</summary><div class="overflow" style="margin-top:8px"><table><tr><th>Employee</th><th>Regular</th><th>Overtime</th><th>Other</th><th>Employer tax</th></tr>`+
+    rows.map(e=>`<tr><td>${esc(e.employeeName)}</td><td>${goMoney(e.regular)}</td><td>${goMoney(e.ot)}</td><td>${goMoney(Number(e.double||0)+Number(e.sick||0)+Number(e.additional||0))}</td><td>${goMoney(e.employerTax)}</td></tr>`).join('')+`</table></div></details>`;
+  h+=`<div class="actions"><button onclick="${kind==='weekly'?'goRemoveWeekly()':'goRemoveBiweekly()'}">Remove this file</button></div>`;
+  return h;
+}
+function goChecksHtml(items){return items.map(i=>`<li class="${i.s}"><span class="ic">${i.s==='ok'?'✓':i.s==='bad'?'✕':i.s==='warn'?'!':'·'}</span><span>${esc(i.t)}</span></li>`).join('');}
+function goPreviewHtml(res,label){
+  if(!res||!res.wb)return '';
+  return `<details class="go-det"><summary>Preview ${label} (${res.wb.SheetNames.length} sheets)</summary><div class="go-pv">${res.wb.SheetNames.filter(n=>n!=='Detailed').map(n=>`<h4>${esc(n)}</h4>${goSheetHtml(res.wb.Sheets[n])}`).join('')}</div></details>`;
+}
+function renderGustoOnly(){
+  if(!standalone())return;
+  const W=GUSTO,B=BIWEEKLY,al=goAlign();
+  const req=requiredEmployeeTaxRows(),wReq=req.filter(r=>r.scope==='Weekly'),bReq=req.filter(r=>r.scope==='Biweekly');
+  const wTax=validateRequiredEmployeeTaxes('Weekly'),bTax=validateRequiredEmployeeTaxes('Biweekly');
+  const wBlocked=!W.uploaded&&/^BLOCKED/.test(W.status||''),bBlocked=!B.uploaded&&/^BLOCKED/.test(B.status||'');
+  const acc=(id,done,badc,current)=>{const e=goEl(id);e.classList.toggle('done',!!done);e.classList.toggle('bad',!!badc);e.classList.toggle('current',!!current&&!done&&!badc);};
+
+  /* ---------- which payroll is showing ---------- */
+  document.querySelectorAll('.go-sw').forEach(b=>{const on=b.dataset.kind===GO_VIEW;b.classList.toggle('active',on);b.setAttribute('aria-selected',on?'true':'false');});
+  goEl('goW').style.display=GO_VIEW==='weekly'?'':'none';
+  goEl('goBw').style.display=GO_VIEW==='biweekly'?'':'none';
+
+  /* ================= WEEKLY ================= */
+  if(W.uploaded){goSetBadge('goB1','b-ok','Loaded ✓');goEl('goMsg1').innerHTML=goGlBlock(W,'weekly');}
+  else if(wBlocked){goSetBadge('goB1','b-bad','Needs attention');goEl('goMsg1').innerHTML=`<div class="go-err"><b>This file can’t be used.</b><br>${esc(W.status.replace(/^BLOCKED — /,''))}</div>`;}
+  else{goSetBadge('goB1','b-warn','Waiting for file');goEl('goMsg1').innerHTML='';}
+  const in2=goEl('goTaxW'),dz2=goEl('goDrop2');
+  in2.disabled=!W.uploaded;dz2.classList.toggle('is-disabled',!W.uploaded);
+  goEl('goDrop2Sub').textContent=W.uploaded?'or drag and drop it here':'Upload the weekly GL first';
+  goStatusStyle('goTaxWStatus');
+  if(!W.uploaded){goSetBadge('goB2','b-warn','After step 1');goEl('goMsg2').innerHTML='';}
+  else if(!wReq.length){goSetBadge('goB2','b-ok','Not needed ✓');goEl('goMsg2').innerHTML='<div class="go-info">No paystub is needed this week — nobody who requires an employee-tax figure is in this GL.</div>';dz2.classList.add('is-disabled');in2.disabled=true;goEl('goDrop2Sub').textContent='Nothing to import';}
+  else{goSetBadge('goB2',wTax.ok?'b-ok':'b-warn',wTax.ok?'Imported ✓':'Needed');goEl('goMsg2').innerHTML=`<div class="hint" style="margin-top:12px">Employee tax is needed for: <b>${wReq.map(r=>esc(r.name)).join(', ')}</b></div>`+goTaxTable('Weekly',wReq);}
+
+  /* ---- "also a biweekly week" add-on ---- */
+  goEl('goBiChk').checked=GO_INCL_BI;
+  goEl('goAddonBody').style.display=GO_INCL_BI?'':'none';
+  goEl('goDropWb').style.display=(GO_INCL_BI&&!B.uploaded)?'':'none';
+  let am='',hint='';
+  if(GO_INCL_BI){
+    if(B.uploaded){
+      am=`<div class="go-chips">`+goChip('14-day GL',esc(goRange(B.period)),al.ok?'ok':'bad')+goChip('Employees',String(B.employeeActual.size))+goChip('Wages',goMoney(goWages(B._actual)))+`</div>`+(al.ok?'':`<div class="go-err" style="margin-top:10px">${esc(al.msg)}</div>`)+`<div class="actions"><button onclick="goRemoveBiweekly()">Remove the 14-day GL</button></div>`;
+    }else if(bBlocked)am=`<div class="go-err" style="margin-top:10px"><b>This file can’t be used.</b><br>${esc(B.status.replace(/^BLOCKED — /,''))}</div>`;
+  }else if(W.uploaded&&B.uploaded&&B.period&&W.period&&B.period.end===W.period.end){
+    hint=`<div class="go-info" style="margin-top:10px">A 14-day GL for this same cycle is already loaded. <button onclick="goIncludeBi(true)">Yes — include Meaghan &amp; Ryan in the WC sheet</button></div>`;
+  }
+  goEl('goAddonMsg').innerHTML=am;goEl('goAddonHint').innerHTML=hint;
+
+  /* ---- weekly checks + download ---- */
+  const wi=[];const aw=(s,t)=>wi.push({s,t});
+  if(!W.uploaded)aw('todo','Upload the weekly GL');
+  else{
+    aw(W.period.days===7?'ok':'bad',`GL covers 7 days (${goRange(W.period)})`);
+    aw(W.actual.balanced?'ok':'bad','Debits equal credits');
+    aw(W.taxAssignmentValid?'ok':'bad','Employer tax matched to each employee');
+    if(!wReq.length)aw('ok','No employee-tax import needed this week');
+    else wReq.forEach(r=>{const v=getEmployeeTax('Weekly',r.name);aw(v==null?'todo':'ok',v==null?`Employee tax needed for ${r.name}`:`Employee tax for ${r.name}: ${goMoney(v)}`);});
+    if(wReq.some(r=>getEmployeeTax('Weekly',r.name)!=null&&!/^Manual/.test(EMPLOYEE_TAX.get(employeeTaxKey('Weekly',r.name))?.source||'')))aw('ok','Paystub pay period matches the GL');
+    if(GO_INCL_BI){
+      if(!B.uploaded)aw('todo','Upload the 14-day GL (or untick “biweekly week”)');
+      else{aw(B.period.days===14?'ok':'bad',`14-day GL covers 14 days (${goRange(B.period)})`);aw(al.ok?'ok':'bad',al.ok?'14-day GL ends the same day as the weekly GL':al.msg);}
+    }
+  }
+  goEl('goChecksW').innerHTML=goChecksHtml(wi);
+  let wRes=null,wWhy='';
+  if(!W.uploaded)wWhy='Upload the weekly GL first.';
+  else if(GO_INCL_BI&&!B.uploaded)wWhy='Upload the 14-day GL above, or untick “This is also a biweekly week”.';
+  else if(!al.ok)wWhy=al.msg;
+  else if(!wTax.ok)wWhy='Waiting for employee tax: '+wTax.missing.map(x=>x.name).join(', ')+'.';
+  else{wRes=goBuild('weekly');if(wRes.err)wWhy=wRes.err;}
+  const wOk=!!(wRes&&wRes.wb),wBad=wi.some(i=>i.s==='bad');
+  goEl('goDlW').disabled=!wOk;
+  goEl('goWhyW').className='go-why'+(!wOk&&W.uploaded&&(wBad||wRes&&wRes.err)?' bad':'');
+  goEl('goWhyW').textContent=wOk?`Ready: Updated_Weekly_Gusto_${W.period.start}_to_${W.period.end}${GO_INCL_BI&&B.uploaded?'_with_biweekly_WC':''}.xlsx`:wWhy;
+  goSetBadge('goB4W',wBad?'b-bad':wOk?'b-ok':'b-warn',wBad?'Needs attention':wOk?'Ready ✓':'Not ready yet');
+  goEl('goPreviewW').innerHTML=goPreviewHtml(wRes,'the weekly workbook');
+  const wCur=!W.uploaded?'goS1':(W.uploaded&&!wTax.ok)?'goS2':null;
+  acc('goS1',W.uploaded,wBlocked,wCur==='goS1');acc('goS2',W.uploaded&&wTax.ok,false,wCur==='goS2');acc('goS4W',wOk&&!wBad,wBad,!wCur&&!wOk);
+
+  /* ================= BIWEEKLY ================= */
+  if(B.uploaded){goSetBadge('goB3','b-ok','Loaded ✓');goEl('goMsg3').innerHTML=goGlBlock(B,'biweekly');}
+  else if(bBlocked){goSetBadge('goB3','b-bad','Needs attention');goEl('goMsg3').innerHTML=`<div class="go-err"><b>This file can’t be used.</b><br>${esc(B.status.replace(/^BLOCKED — /,''))}</div>`;}
+  else{goSetBadge('goB3','b-warn','Waiting for file');goEl('goMsg3').innerHTML='';}
+  const in4=goEl('goTaxB'),dz4=goEl('goDrop4');
+  in4.disabled=!B.uploaded;dz4.classList.toggle('is-disabled',!B.uploaded);
+  goEl('goDrop4Sub').textContent=B.uploaded?'or drag and drop it here':'Upload the biweekly GL first';
+  goStatusStyle('goTaxBStatus');
+  if(!B.uploaded){goSetBadge('goB3b','b-warn','After step 1');goEl('goMsg4').innerHTML='';}
+  else if(!bReq.length){goSetBadge('goB3b','b-ok','Not needed ✓');goEl('goMsg4').innerHTML='<div class="go-info">No paystub is needed — nobody who requires an employee-tax figure is in this GL.</div>';dz4.classList.add('is-disabled');in4.disabled=true;goEl('goDrop4Sub').textContent='Nothing to import';}
+  else{goSetBadge('goB3b',bTax.ok?'b-ok':'b-warn',bTax.ok?'Imported ✓':'Needed');goEl('goMsg4').innerHTML=`<div class="hint" style="margin-top:12px">Employee tax is needed for: <b>${bReq.map(r=>esc(r.name)).join(', ')}</b></div>`+goTaxTable('Biweekly',bReq);}
+
+  const bi=[];const ab=(s,t)=>bi.push({s,t});
+  if(!B.uploaded)ab('todo','Upload the biweekly GL');
+  else{
+    ab(B.period.days===14?'ok':'bad',`GL covers 14 days (${goRange(B.period)})`);
+    ab(B._actual.balanced?'ok':'bad','Debits equal credits');
+    if(!bReq.length)ab('ok','No employee-tax import needed');
+    else bReq.forEach(r=>{const v=getEmployeeTax('Biweekly',r.name);ab(v==null?'todo':'ok',v==null?`Employee tax needed for ${r.name}`:`Employee tax for ${r.name}: ${goMoney(v)}`);});
+    const ctl=employeeTaxControl('Biweekly');
+    if(ctl!=null&&bTax.ok){const en=bReq.reduce((s,r)=>s+(getEmployeeTax('Biweekly',r.name)||0),0);ab(Math.abs(en-ctl)<=0.0201?'ok':'bad',`Imported employee tax ${goMoney(en)} agrees with the Gusto GL (${goMoney(ctl)})`);}
+    if(bReq.some(r=>getEmployeeTax('Biweekly',r.name)!=null&&!/^Manual/.test(EMPLOYEE_TAX.get(employeeTaxKey('Biweekly',r.name))?.source||'')))ab('ok','Paystub pay period matches the GL');
+  }
+  goEl('goChecksB').innerHTML=goChecksHtml(bi);
+  let bRes=null,bWhy='';
+  if(!B.uploaded)bWhy='Upload the biweekly GL first.';
+  else if(!bTax.ok)bWhy='Waiting for employee tax: '+bTax.missing.map(x=>x.name).join(', ')+'.';
+  else{bRes=goBuild('biweekly');if(bRes.err)bWhy=bRes.err;}
+  const bOk=!!(bRes&&bRes.wb),bBad=bi.some(i=>i.s==='bad');
+  goEl('goDlB').disabled=!bOk;
+  goEl('goWhyB').className='go-why'+(!bOk&&B.uploaded&&(bBad||bRes&&bRes.err)?' bad':'');
+  goEl('goWhyB').textContent=bOk?`Ready: Updated_Biweekly_Gusto_${B.period.start}_to_${B.period.end}.xlsx`:bWhy;
+  goSetBadge('goB4B',bBad?'b-bad':bOk?'b-ok':'b-warn',bBad?'Needs attention':bOk?'Ready ✓':'Not ready yet');
+  goEl('goPreviewB').innerHTML=goPreviewHtml(bRes,'the biweekly workbook');
+  const bCur=!B.uploaded?'goS3':(B.uploaded&&!bTax.ok)?'goS3b':null;
+  acc('goS3',B.uploaded,bBlocked,bCur==='goS3');acc('goS3b',B.uploaded&&bTax.ok,false,bCur==='goS3b');acc('goS4B',bOk&&!bBad,bBad,!bCur&&!bOk);
+
+  /* ---- small "ready" marks on the two big buttons ---- */
+  goEl('goSwW').textContent=wOk?'✓ Ready':'';goEl('goSwB').textContent=bOk?'✓ Ready':'';
+}
+function goSetView(k){GO_VIEW=k;renderGustoOnly();window.scrollTo(0,0);}
+function goIncludeBi(v){GO_INCL_BI=!!v;renderGustoOnly();}
+function goRemoveWeekly(){GUSTO=emptyGusto();clearEmployeeTaxScope('Weekly');goEl('goTaxWStatus').textContent='';renderGustoOnly();}
+function goRemoveBiweekly(){BIWEEKLY=emptyBiweekly();clearEmployeeTaxScope('Biweekly');goEl('goTaxBStatus').textContent='';renderGustoOnly();}
+function goStartOver(kind){
+  const has=kind==='weekly'?GUSTO.uploaded:BIWEEKLY.uploaded;
+  if(has&&!confirm('Clear this payroll and start again?'))return;
+  if(kind==='weekly'){GUSTO=emptyGusto();clearEmployeeTaxScope('Weekly');GO_INCL_BI=false;goEl('goTaxWStatus').textContent='';}
+  else{BIWEEKLY=emptyBiweekly();clearEmployeeTaxScope('Biweekly');goEl('goTaxBStatus').textContent='';}
+  renderGustoOnly();window.scrollTo(0,0);
+}
+function goWireDrop(labelId,inputId,handler){
+  const lb=goEl(labelId),inp=goEl(inputId);
+  ['dragenter','dragover'].forEach(ev=>lb.addEventListener(ev,e=>{e.preventDefault();if(!inp.disabled)lb.classList.add('drag');}));
+  ['dragleave','drop'].forEach(ev=>lb.addEventListener(ev,e=>{e.preventDefault();lb.classList.remove('drag');}));
+  lb.addEventListener('drop',e=>{if(inp.disabled)return;const f=e.dataTransfer.files[0];if(f)handler(f);});
+  inp.addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';if(f)handler(f);});
+}
+goWireDrop('goDrop1','goGlW',f=>{goEl('goTaxWStatus').textContent='';loadGusto(f);});
+goWireDrop('goDrop2','goTaxW',f=>loadEmployeeTaxFile(f,'Weekly','goTaxWStatus'));
+goWireDrop('goDrop3','goGlB',f=>{goEl('goTaxBStatus').textContent='';loadBiweekly(f);});
+goWireDrop('goDropWb','goGlBw',f=>{goEl('goTaxBStatus').textContent='';loadBiweekly(f);});
+goWireDrop('goDrop4','goTaxB',f=>loadEmployeeTaxFile(f,'Biweekly','goTaxBStatus'));
+document.querySelectorAll('.navtab').forEach(b=>b.addEventListener('click',()=>switchTab(b.dataset.tab)));
+document.querySelectorAll('.go-sw').forEach(b=>b.addEventListener('click',()=>goSetView(b.dataset.kind)));
+if(location.hash==='#gusto')switchTab('gusto');
+
+if(typeof XLSX==='undefined'||typeof Papa==='undefined'){const e=document.getElementById('libError');e.style.display='block';e.textContent='Spreadsheet libraries could not load. Check the internet connection and reload.';}
+</script></body></html>
