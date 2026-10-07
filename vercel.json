@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/(.*)",
-      "destination": "/Blunted_Payroll_Index.html"
+      "destination": "/payrolll.html"
     }
   ]
 }
