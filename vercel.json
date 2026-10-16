@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/(.*)",
-      "destination": "/payrolll.html"
+      "destination": "/payroll_v1.html"
     }
   ]
 }
