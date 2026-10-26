@@ -77,6 +77,7 @@ details.go-det>summary{cursor:pointer;font-weight:650;font-size:.86rem}
   <button class="navtab" role="tab" aria-selected="false" data-tab="gusto">Gusto Only<small>Already paid in Gusto · no timesheet</small></button>
 </div></header>
 <div class="wrap" id="tab-main">
+<div class="panel" aria-label="Application SOP"><details><summary style="cursor:pointer;font-weight:700">Application SOP — Required files and steps</summary><div class="small" style="margin-top:10px"><strong>Full Payroll required files:</strong> QBO timesheet CSV/XLS/XLSX for the selected payroll period; Gusto regular General Ledger XLSX for reconciliation. Upload a 14-day Gusto GL when biweekly payroll applies. An updated hourly-rate workbook is needed only when rates differ from the embedded master.<p><strong>Steps:</strong> Select the correct pay period, upload timesheet, review payroll versus RSC/cash and overtime, resolve review items, approve, upload the applicable Gusto GL, reconcile and download the output workbook.</p><p><strong>Gusto Only:</strong> Select Weekly or Biweekly, then upload the matching Gusto GL XLSX and employee paystubs PDF for that payroll period. If weekly payroll includes biweekly employees, provide the optional 14-day GL for the workers' compensation sheet.</p><p><strong>Important:</strong> Keep every file for the same payroll period. Do not upload a Payroll Journal in place of paystubs. The SOP is guidance only; calculations and approval controls are unchanged.</p></div></details></div>
 <h1>Blunted Payroll Timesheet Automation</h1>
 <!-- Production Final: validated against the supplied 2026-08-24 through 2026-08-30 timesheet, updated hourly-rate file, weekly GL and approved workbook. -->
 <p class="sub">Production workflow: QBO timesheet → split Payroll / RSC cash → daily OT → approval → Gusto reconciliation → final workbook.</p>
@@ -141,6 +142,7 @@ details.go-det>summary{cursor:pointer;font-weight:650;font-size:.86rem}
 </div></div>
 </div>
 <div class="wrap" id="tab-gusto" style="display:none">
+<div class="panel" aria-label="Gusto Only SOP"><details><summary style="cursor:pointer;font-weight:700">SOP — Required Gusto files</summary><div class="small" style="margin-top:10px">Choose Weekly or Biweekly. Upload the matching Gusto General Ledger Excel export first, then the paystubs PDF for that pay period (not the Payroll Journal). For a weekly run that also includes biweekly employees, supply the optional 14-day GL for the WC sheet. Review the results and download the workbook.</div></details></div>
 <h1>Gusto Only</h1>
 <p class="sub">Already paid in Gusto? Choose the payroll, upload its Gusto files, download the workbook. No timesheet needed.</p>
 
@@ -1122,8 +1124,8 @@ function expectedOutputWorkbook(){
   ows['!cols']=[{wch:23},{wch:14},{wch:15},{wch:17},{wch:18},{wch:15},{wch:3},{wch:23},{wch:20},{wch:22},{wch:23},{wch:20}];
   styleRect(ows,1,1,1,6,headerStyle); styleRect(ows,1,8,1,12,headerStyle); styleRect(ows,gt,8,gt,12,totalStyle);
   ows['!autofilter']={ref:`A1:F${daily.length+1}`};
-  for(let rr=2;rr<=daily.length+1;rr++){if(ows[`B${rr}`])ows[`B${rr}`].z='m/d/yyyy';for(const cc of ['C','D','E','F'])if(ows[`${cc}${rr}`])ows[`${cc}${rr}`].z='#,##0.##';}
-  for(let rr=2;rr<=gt;rr++)for(const cc of ['I','J','K','L'])if(ows[`${cc}${rr}`])ows[`${cc}${rr}`].z='#,##0.##';
+  for(let rr=2;rr<=daily.length+1;rr++){if(ows[`B${rr}`])ows[`B${rr}`].z='m/d/yyyy';for(const cc of ['C','D','E','F'])if(ows[`${cc}${rr}`])ows[`${cc}${rr}`].z='General';}
+  for(let rr=2;rr<=gt;rr++)for(const cc of ['I','J','K','L'])if(ows[`${cc}${rr}`])ows[`${cc}${rr}`].z='General';
   XLSX.utils.book_append_sheet(wb,ows,'Overtime Calculation');
 
   // ---------------- RSC AND REST ----------------
