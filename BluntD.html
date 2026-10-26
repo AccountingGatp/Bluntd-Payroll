@@ -882,7 +882,15 @@ function setPreviewReviewed(key,checked){
   if(!GUSTO_PREVIEW.reviewNotes)GUSTO_PREVIEW.reviewNotes=new Map();
   const cur=GUSTO_PREVIEW.reviewNotes.get(key)||{reviewed:false,note:''};
   GUSTO_PREVIEW.reviewNotes.set(key,{...cur,reviewed:checked});
+  // Preserve the user's place when the review table is rebuilt.
+  const reviewTable=document.querySelector('#gustoPreviewComparison .overflow');
+  const scrollY=window.scrollY;
+  const tableTop=reviewTable?.scrollTop??0;
+  const tableLeft=reviewTable?.scrollLeft??0;
   compareGustoPreview();renderGustoPreview();renderApproval();
+  const updatedTable=document.querySelector('#gustoPreviewComparison .overflow');
+  if(updatedTable){updatedTable.scrollTop=tableTop;updatedTable.scrollLeft=tableLeft;}
+  window.scrollTo(window.scrollX,scrollY);
 }
 function setPreviewNote(key,note){
   if(!GUSTO_PREVIEW.reviewNotes)GUSTO_PREVIEW.reviewNotes=new Map();
