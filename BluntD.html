@@ -600,7 +600,7 @@ function tableHtml(headers,rows,totalLast=false){return `<div class="overflow"><
 // Expected-output helpers intentionally keep calculation precision.
 // We only clean JavaScript floating-point noise; we do NOT round payroll values to cents here.
 function calcValue(v){const n=Number(v);return Number.isFinite(n)?Math.round((n+Number.EPSILON)*1e10)/1e10:0;}
-function fmtCalc(v,maxDp=4){if(v==null||!Number.isFinite(Number(v)))return '—';const n=calcValue(v);return n.toFixed(maxDp).replace(/\.?0+$/,'');}
+function fmtCalc(v,maxDp=2){if(v==null||!Number.isFinite(Number(v)))return '—';const n=calcValue(v);return n.toFixed(maxDp).replace(/\.?0+$/,'');}
 function expectedPayrollStraightRows(){
   const m=new Map();
   for(const x of RESULT.dataRows.filter(x=>x.route==='PAYROLL'&&Number.isFinite(x.hours))){
@@ -1084,7 +1084,7 @@ function expectedOutputWorkbook(){
   for(const addr of Object.keys(ws)){
     if(addr[0]==='!')continue;
     const cell=ws[addr];
-    if(typeof cell.v==='number')cell.z='#,##0.####';
+    if(typeof cell.v==='number')cell.z='#,##0.##';
   }
   // Orange-highlighted pay columns in the Overtime hours table: Regular Amount (F), OT Amount (G), Total (I).
   const ORANGE='FF9900';
@@ -1111,8 +1111,8 @@ function expectedOutputWorkbook(){
   for(let rr=2;rr<=dataAoa.length;rr++){
     if(dws[`F${rr}`])dws[`F${rr}`].z='m/d/yyyy';
     if(dws[`K${rr}`])dws[`K${rr}`].z='#,##0.##';
-    if(dws[`P${rr}`])dws[`P${rr}`].z='$#,##0.####';
-    if(dws[`Q${rr}`])dws[`Q${rr}`].z='$#,##0.####';
+    if(dws[`P${rr}`])dws[`P${rr}`].z='$#,##0.##';
+    if(dws[`Q${rr}`])dws[`Q${rr}`].z='$#,##0.##';
   }
   if(dws['!ref'])dws['!autofilter']={ref:dws['!ref']};
   XLSX.utils.book_append_sheet(wb,dws,'Data');
@@ -1148,7 +1148,7 @@ function expectedOutputWorkbook(){
   rws['!autofilter']={ref:`A1:G${Math.max(1,rAoa.length-1)}`};
   for(let rr=2;rr<=rAoa.length;rr++){
     for(const cc of ['B','C','D'])if(rws[`${cc}${rr}`])rws[`${cc}${rr}`].z='#,##0.##';
-    for(const cc of ['E','F','G'])if(rws[`${cc}${rr}`])rws[`${cc}${rr}`].z='$#,##0.####';
+    for(const cc of ['E','F','G'])if(rws[`${cc}${rr}`])rws[`${cc}${rr}`].z='$#,##0.##';
   }
   XLSX.utils.book_append_sheet(wb,rws,'RSC and REST');
 
@@ -1161,7 +1161,7 @@ function expectedOutputWorkbook(){
   hws['!cols']=[{wch:3},{wch:27},{wch:13},{wch:42}];
   styleRect(hws,2,2,2,4,headerStyle);
   hws['!autofilter']={ref:`B2:D${hrAoa.length}`};
-  for(let rr=4;rr<=hrAoa.length;rr++)if(hws[`C${rr}`])hws[`C${rr}`].z='$#,##0.####';
+  for(let rr=4;rr<=hrAoa.length;rr++)if(hws[`C${rr}`])hws[`C${rr}`].z='$#,##0.##';
   XLSX.utils.book_append_sheet(wb,hws,'Hourly Rates');
 
   return wb;
@@ -1321,7 +1321,7 @@ function styleWcSheet(ws,rowCount){
   borderRect(ws,1,5,Math.min(4,rowCount),11);
   for(let r=2;r<=rowCount;r++){
     for(const c of ['C','F','G','H','I']){
-      const a=`${c}${r}`; if(ws[a]&&typeof ws[a].v==='number')ws[a].z='$#,##0.########';
+      const a=`${c}${r}`; if(ws[a]&&typeof ws[a].v==='number')ws[a].z='$#,##0.##';
     }
     if(ws[`K${r}`]&&typeof ws[`K${r}`].v==='number')ws[`K${r}`].z='0.000000';
   }
@@ -1724,7 +1724,7 @@ function goStatusStyle(id){const el=goEl(id),t=el.textContent||'';el.className='
 function goSheetHtml(ws){
   const aoa=XLSX.utils.sheet_to_json(ws,{header:1,defval:''}).filter(r=>r.some(c=>c!==''&&c!=null));
   let w=0;aoa.forEach(r=>{for(let i=r.length-1;i>=0;i--){if(r[i]!==''&&r[i]!=null){w=Math.max(w,i+1);break;}}});
-  const f=v=>{if(typeof v==='number'){const a=Math.abs(v);return a!==0&&a<1?String(+v.toFixed(6)):v.toFixed(2);}return esc(v);};
+  const f=v=>{if(typeof v==='number'){const a=Math.abs(v);return a!==0&&a<1?String(+v.toFixed(2)):v.toFixed(2);}return esc(v);};
   return `<div class="overflow" style="max-height:340px"><table>${aoa.map(r=>'<tr>'+Array.from({length:w},(_,i)=>`<td>${f(r[i]??'')}</td>`).join('')+'</tr>').join('')}</table></div>`;
 }
 function goTaxTable(scope,rows){
